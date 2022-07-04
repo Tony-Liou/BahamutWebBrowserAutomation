@@ -7,13 +7,13 @@ public class LoginPage
     public const string Url = "https://user.gamer.com.tw/login.php";
 
     // <form id="form-login" method="post">
-    private static readonly By loginFormBy = By.Id("form-login");
+    private readonly By loginFormBy = By.Id("form-login");
     // <input name="userid" type="text">
-    private static readonly By userIdBy = By.Name("userid");
+    private readonly By userIdBy = By.Name("userid");
     // <input name="password" type="password">
-    private static readonly By passwordBy = By.Name("password");
+    private readonly By passwordBy = By.Name("password");
     // <a id="btn-login" href="###">
-    private static readonly By loginBy = By.Id("btn-login");
+    private readonly By loginBy = By.Id("btn-login");
     private readonly WebDriver _driver;
 
     public LoginPage(WebDriver driver)

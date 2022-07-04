@@ -5,10 +5,10 @@ namespace WebBrowserAutomation;
 public class HomePage// : BaseHttpClient
 {
     public const string Url = "https://www.gamer.com.tw";
-    private readonly WebDriver _driver;
+    private readonly WebDriver driver;
 
     // <div class="TOP-my TOP-nologin">
-    private readonly By avatorBy = By.ClassName("TOP-my");
+    private readonly By avatarBy = By.ClassName("TOP-my");
     // <a id="signin-btn" onclick="Signin.showSigninMap();">
     private readonly By signinBtnBy = By.Id("signin-btn");
     // <dialog id="dialogify_{int}" class="dialogify fixed popup-dailybox" open>
@@ -39,18 +39,18 @@ public class HomePage// : BaseHttpClient
 
     public HomePage(WebDriver driver)
     {
-        _driver = driver;
+        this.driver = driver;
     }
 
     public bool IsLoggedIn()
     {
-        var divClass = _driver.FindElement(avatorBy).GetAttribute("class");
+        var divClass = driver.FindElement(avatarBy).GetAttribute("class");
         return !divClass.Contains("TOP-nologin");
     }
 
     public void ClickLoginLink()
     {
-        _driver.FindElement(By.CssSelector("div.TOP-nologin > a:first-child")).Click();
+        driver.FindElement(By.CssSelector("div.TOP-nologin > a:first-child")).Click();
     }
 
     /// <summary>
@@ -58,23 +58,23 @@ public class HomePage// : BaseHttpClient
     /// </summary>
     public void GetDoubleDailySignInGift()
     {
-        _driver.FindElement(signinBtnBy).Click();
+        driver.FindElement(signinBtnBy).Click();
 
-        var popupDialog = _driver.FindElement(dailyboxDialogBy);
+        var popupDialog = driver.FindElement(dailyboxDialogBy);
         popupDialog.FindElement(doubleCoinsBtnBy).Click();
-        _driver.FindElement(confirmWatchAdBtnBy).Click();
+        driver.FindElement(confirmWatchAdBtnBy).Click();
 
-        var adIframe = _driver.FindElement(adIframeBy);
+        var adIframe = driver.FindElement(adIframeBy);
         // Switch to iframe
-        _driver.SwitchTo().Frame(adIframe);
-        _driver.FindElement(resumeAdDivBy).Click();
+        driver.SwitchTo().Frame(adIframe);
+        driver.FindElement(resumeAdDivBy).Click();
 
         // TODO: wait the ad finishing
         Thread.Sleep(30 * 1000);
 
-        _driver.FindElement(closeAdImgBy).Click();
+        driver.FindElement(closeAdImgBy).Click();
 
         // Return to the top level
-        _driver.SwitchTo().DefaultContent();
+        driver.SwitchTo().DefaultContent();
     }
 }

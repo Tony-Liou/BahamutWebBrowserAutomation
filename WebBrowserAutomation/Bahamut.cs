@@ -3,7 +3,7 @@
 public class Bahamut : BaseHttpClient
 {
     public const string BaseUrl = "https://www.gamer.com.tw";
-    private static readonly object locker = new();
+    private static readonly object Locker = new();
 
     /// <summary>
     /// A static <see cref="HttpClient"/>. Do not <see cref="HttpClient.Dispose(bool)"/> it.
@@ -12,27 +12,26 @@ public class Bahamut : BaseHttpClient
     {
         get
         {
-            if (_httpClient == null)
+            if (_client != null)
             {
-                lock (locker)
-                {
-                    if (_httpClient == null)
-                    {
-                        _httpClient = new HttpClient
-                        {
-                            BaseAddress = new Uri(BaseUrl)
-                        };
-                    }
-                }
+                return _client;
             }
-            return _httpClient;
+
+            lock (Locker)
+            {
+                _client ??= new HttpClient
+                {
+                    BaseAddress = new Uri(BaseUrl)
+                };
+            }
+            return _client;
         }
     }
 
     /// <summary>
     /// Test whether the website is running.
     /// </summary>
-    /// <returns><c>true</c> if HTTP status code of resposne is 200ish; otherwise, <c>false</c>.</returns>
+    /// <returns><c>true</c> if HTTP status code of response is 200ish; otherwise, <c>false</c>.</returns>
     public static async Task<bool> IsOperationalAsync()
     {
         var resp = await Client.GetAsync(string.Empty);
@@ -42,6 +41,6 @@ public class Bahamut : BaseHttpClient
 
 public abstract class BaseHttpClient
 {
-    private protected static HttpClient? _httpClient;
+    private protected static HttpClient? _client;
 }
 
