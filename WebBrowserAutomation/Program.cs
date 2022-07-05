@@ -1,10 +1,14 @@
-﻿using OpenQA.Selenium;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using WebBrowserAutomation;
 using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
 
-Console.WriteLine("Starting...");
+using IHost host = Host.CreateDefaultBuilder().Build();
+var config = host.Services.GetRequiredService<IConfiguration>();
 
 var task = Bahamut.IsOperationalAsync();
 
@@ -28,7 +32,8 @@ try
     driver = new ChromeDriver(options);
     driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromMilliseconds(500);
 
-    var (username, password) = GetCredentials();
+    string username = config.GetValue<string>("BAHAMUT_USERNAME");
+    string password = config.GetValue<string>("BAHAMUT_PASSWORD");
     if (username == null || password == null)
     {
         throw new InvalidOperationException("Login credentials is missing");
@@ -36,19 +41,12 @@ try
 
     LoginPage loginPage = new(driver);
     var homePage = loginPage.LogInValidUser(username, password);
+
     Console.WriteLine($"Logged in? {homePage.IsLoggedIn()}");
+
+    homePage.GetDoubleDailySignInGift();
 }
 finally
 {
     driver.Quit();
-}
-
-static (string? user, string? pwd) GetCredentials()
-{
-    const string userKey = "BAHA_USER";
-    const string pwdKey = "BAHA_PWD";
-    var user = Environment.GetEnvironmentVariable(userKey);
-    var pwd = Environment.GetEnvironmentVariable(pwdKey);
-
-    return (user, pwd);
 }

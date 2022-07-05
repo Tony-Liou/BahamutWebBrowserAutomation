@@ -1,4 +1,4 @@
-﻿using OpenQA.Selenium;
+using OpenQA.Selenium;
 
 namespace WebBrowserAutomation;
 
@@ -26,7 +26,7 @@ public class HomePage// : BaseHttpClient
      */
     private readonly By confirmWatchAdBtnBy = By.CssSelector("dialog > form button[type=\"submit\"]");
 
-    private readonly By adIframeBy = By.CssSelector("ins[data-google-query-id] > div > iframe");
+    private readonly By adIframeBy = By.CssSelector("ins[data-google-query-id] iframe");
 
     private readonly By resumeAdDivBy =
         By.CssSelector("div.videoAdUi > div.rewardDialogueWrapper[style=\"\"] div.rewardResumebutton");
@@ -67,12 +67,8 @@ public class HomePage// : BaseHttpClient
         var adIframe = driver.FindElement(adIframeBy);
         // Switch to iframe
         driver.SwitchTo().Frame(adIframe);
-        driver.FindElement(resumeAdDivBy).Click();
-
-        // TODO: wait the ad finishing
-        Thread.Sleep(30 * 1000);
-
-        driver.FindElement(closeAdImgBy).Click();
+        
+        new GoogleAdIframe(driver).WatchAdThenCloseIt();
 
         // Return to the top level
         driver.SwitchTo().DefaultContent();
