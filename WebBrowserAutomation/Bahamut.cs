@@ -1,6 +1,6 @@
-﻿namespace WebBrowserAutomation;
+namespace WebBrowserAutomation;
 
-public class Bahamut : BaseHttpClient
+public class Bahamut : HttpClientBase
 {
     public const string BaseUrl = "https://www.gamer.com.tw";
     private static readonly object Locker = new();
@@ -29,7 +29,7 @@ public class Bahamut : BaseHttpClient
     }
 
     /// <summary>
-    /// Test whether the website is running.
+    /// Send a HTTP request to test whether the website is running.
     /// </summary>
     /// <returns><c>true</c> if HTTP status code of response is 200ish; otherwise, <c>false</c>.</returns>
     public static async Task<bool> IsOperationalAsync()
@@ -39,7 +39,7 @@ public class Bahamut : BaseHttpClient
     }
 }
 
-public abstract class BaseHttpClient
+public abstract class HttpClientBase
 {
     private protected static HttpClient? _client;
 }

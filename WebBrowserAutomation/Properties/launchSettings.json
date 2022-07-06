@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WebBrowserAutomation": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -8,12 +8,12 @@ using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
 
 using IHost host = Host.CreateDefaultBuilder().Build();
-var config = host.Services.GetRequiredService<IConfiguration>();
+IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
 var task = Bahamut.IsOperationalAsync();
 
 new DriverManager().SetUpDriver(new ChromeConfig());
-var options = new ChromeOptions();
+ChromeOptions options = new();
 
 Console.Write("巴哈姆特電玩資訊站");
 if (await task)
