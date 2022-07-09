@@ -5,12 +5,10 @@ VisualStudioVersion = 17.2.32516.85
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebBrowserAutomation", "WebBrowserAutomation\WebBrowserAutomation.csproj", "{34583F96-6402-484C-ABD6-BE055A586687}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "方案項目", "方案項目", "{C2DE4D9F-7852-4025-80D9-E76A95C9C589}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1AA801CA-4187-4848-A81B-85A1502A150E}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1AA801CA-4187-4848-A81B-85A1502A150E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -15,15 +15,15 @@ public class GoogleAdIframe
     /// OR
     /// <div id="count_down" style="visibility: hidden;">0 秒後可獲獎勵</div>
     /// </example>
-    private static readonly By countDownBy = By.Id("count_down");
+    private static readonly By CountDownBy = By.Id("count_down");
 
     // <div id="close_button_icon"></div>
-    private static readonly By closeButtonIconBy = By.Id("close_button_icon");
+    private static readonly By CloseButtonIconBy = By.Id("close_button_icon");
 
-    private readonly By resumeAdDivBy =
+    private readonly By _resumeAdDivBy =
         By.CssSelector("div.videoAdUi > div.rewardDialogueWrapper[style=\"\"] div.rewardResumebutton");
 
-    private readonly By closeAdImgBy = By.CssSelector(
+    private readonly By _closeAdImgBy = By.CssSelector(
         "div.ad-video > img[src=\"https://googleads.g.doubleclick.net/pagead/images/gmob/close-circle-30x30.png\"]");
 
     private readonly WebDriver _driver;
@@ -35,15 +35,15 @@ public class GoogleAdIframe
 
     public void WatchAdThenCloseIt()
     {
-        _driver.FindElement(resumeAdDivBy).Click();
+        _driver.FindElement(_resumeAdDivBy).Click();
 
-        string countDownInfo = _driver.FindElement(countDownBy).Text;
+        string countDownInfo = _driver.FindElement(CountDownBy).Text;
         int remainingSeconds = int.Parse(countDownInfo[..countDownInfo.IndexOf(' ')]);
 
         // Add an extra second as buffer.
         Task delay = Task.Delay(TimeSpan.FromSeconds(remainingSeconds + 1));
 
-        var crossIcon = _driver.FindElement(closeButtonIconBy);
+        var crossIcon = _driver.FindElement(CloseButtonIconBy);
 
         // Block this thread until the ad is finished and closed.
         delay.ContinueWith(_ => crossIcon.Click()).Wait();

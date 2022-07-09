@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using WebBrowserAutomation;
+using WebBrowserAutomation.Pages;
 using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
 
@@ -34,7 +35,7 @@ try
 
     string username = config.GetValue<string>("BAHAMUT_USERNAME");
     string password = config.GetValue<string>("BAHAMUT_PASSWORD");
-    if (username == null || password == null)
+    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
     {
         throw new InvalidOperationException("Login credentials is missing");
     }
