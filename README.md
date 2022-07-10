@@ -39,11 +39,11 @@ export BAHAMUT_USERNAME=username
 export BAHAMUT_PASSWORD=password
 ```
 
-若還想知道有其他設定來源可以參考[官方文件](https://docs.microsoft.com/zh-tw/dotnet/core/extensions/configuration#configure-console-apps)
+若還想知道有其他設定來源可以參考[官方文件](https://docs.microsoft.com/zh-tw/dotnet/core/extensions/configuration#configure-console-apps)。
 
 #### Logging
 
-此專案使用 Serilog，可以參考[官方文件](https://github.com/serilog/serilog-settings-configuration/blob/dev/README.md) 來修改 `appsettings.json` 裡面的設定。
+此專案使用 Serilog，可以參考[官方文件](https://github.com/serilog/serilog-settings-configuration/blob/dev/README.md)來修改 `appsettings.json` 裡面的設定。
 
 #### Web browser
 
