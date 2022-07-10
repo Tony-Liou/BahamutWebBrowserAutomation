@@ -26,9 +26,9 @@ public class GoogleAdIframe
     private readonly By _closeAdImgBy = By.CssSelector(
         "div.ad-video > img[src=\"https://googleads.g.doubleclick.net/pagead/images/gmob/close-circle-30x30.png\"]");
 
-    private readonly WebDriver _driver;
+    private readonly IWebDriver _driver;
 
-    public GoogleAdIframe(WebDriver driver)
+    public GoogleAdIframe(IWebDriver driver)
     {
         _driver = driver;
     }
