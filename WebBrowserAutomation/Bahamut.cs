@@ -19,11 +19,9 @@ public class Bahamut : HttpClientBase
 
             lock (Locker)
             {
-                _client ??= new HttpClient
-                {
-                    BaseAddress = new Uri(BaseUrl)
-                };
+                _client ??= new HttpClient { BaseAddress = new Uri(BaseUrl) };
             }
+
             return _client;
         }
     }
@@ -43,4 +41,3 @@ public abstract class HttpClientBase
 {
     private protected static HttpClient? _client;
 }
-

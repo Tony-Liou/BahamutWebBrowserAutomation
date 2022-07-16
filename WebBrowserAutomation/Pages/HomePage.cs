@@ -1,4 +1,6 @@
 using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
 using Serilog;
 
 namespace WebBrowserAutomation.Pages;
@@ -32,6 +34,11 @@ public class HomePage
      */
     private readonly By _confirmWatchAdBtnBy = By.CssSelector("dialog > form button[type=\"submit\"]");
 
+    /// <summary>
+    /// &lt;ins id="gpt_unit_/1017768/AD_mobileweb_signin_videorewarded_2" data-google-query-id="CI_W-6_L_PgCFQ7OfAod6sYPFA"&gt;
+    /// &lt;div id="google_ads_iframe_/1017768/AD_mobileweb_signin_videorewarded_2__container__"&gt;
+    /// &lt;iframe src="" id="google_ads_iframe_/1017768/AD_mobileweb_signin_videorewarded_2"&gt;
+    /// </summary>
     private readonly By _adIframeBy = By.CssSelector("ins[data-google-query-id] iframe");
 
     private readonly By _resumeAdDivBy =
@@ -68,16 +75,20 @@ public class HomePage
     }
 
     /// <summary>
-    /// Watch a 30 sec ad and then receive coins.
+    /// Watch a 30 seconds ad and then receive a reward.
     /// </summary>
     public void GetDoubleDailySignInGift()
     {
         Log.Verbose("Getting double daily sign in reward");
-        _driver.FindElement(_signinBtnBy).Click();
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
+        wait.IgnoreExceptionTypes(typeof(ElementClickInterceptedException));
+        var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
+        signinBtn.Click();
 
         var popUpDialog = _driver.FindElement(_dailyboxDialogBy);
         popUpDialog.FindElement(_doubleCoinsBtnBy).Click();
-        _driver.FindElement(_confirmWatchAdBtnBy).Click();
+        wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
+        wait.Until(drv => drv.FindElement(_confirmWatchAdBtnBy)).Click();
 
         var adIframe = _driver.FindElement(_adIframeBy);
         Log.Debug("Switching to the ad iframe");

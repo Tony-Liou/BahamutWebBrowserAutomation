@@ -28,13 +28,13 @@ if (await task)
 else
 {
     Log.Fatal(bahaName + "壞了。自動結束!");
+    Log.CloseAndFlush();
     return;
 }
 
-WebDriver driver = null!;
 try
 {
-    driver = new ChromeDriver();
+    using ChromeDriver driver = new();
     //driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromMilliseconds(500);
     Log.Debug("ChromeDriver created");
 
@@ -44,11 +44,12 @@ try
     {
         throw new InvalidOperationException("Login credentials is missing");
     }
+
     Log.Debug("Got login credentials");
 
     LoginPage loginPage = new(driver);
     var homePage = loginPage.LogIn(username, password);
-    
+
     if (homePage.IsLoggedIn())
     {
         Log.Information("Logged in successfully");
@@ -61,12 +62,15 @@ try
 
     homePage.GetDoubleDailySignInGift();
 }
+catch (WebDriverException wdEx)
+{
+    Log.Error(wdEx, "Web driver error");
+}
 catch (Exception ex)
 {
-    Log.Error(ex, "Error occured");
+    Log.Fatal(ex, "Unexpected error occured");
 }
 finally
 {
     Log.CloseAndFlush();
-    driver.Quit();
 }

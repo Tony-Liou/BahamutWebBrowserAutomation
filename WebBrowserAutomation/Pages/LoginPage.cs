@@ -10,10 +10,13 @@ public class LoginPage
 
     // <form id="form-login" method="post">
     private readonly By _loginFormBy = By.Id("form-login");
+
     // <input name="userid" type="text">
     private readonly By _userIdBy = By.Name("userid");
+
     // <input name="password" type="password">
     private readonly By _passwordBy = By.Name("password");
+
     // <a id="btn-login" href="###">
     private readonly By _loginBy = By.Id("btn-login");
     private readonly IWebDriver _driver;
@@ -46,12 +49,29 @@ public class LoginPage
 
         Log.Verbose("Username: {Username}, Password: {Password}", username, password);
         loginForm.FindElement(_userIdBy).SendKeys(username);
-        loginForm.FindElement(_passwordBy).SendKeys(password + Keys.Enter);
-        //loginForm.FindElement(_loginBy).Click();
+        loginForm.FindElement(_passwordBy).SendKeys(password);
+        loginForm.FindElement(_loginBy).Click();
 
-        var wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(3));
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
         Uri homeUri = new(HomePage.Url);
-        var result = wait.Until(e => homeUri.Equals(e.Url));
+        bool result;
+        try
+        {
+            result = wait.Until(e => homeUri.Equals(e.Url));
+        }
+        catch (WebDriverException wdEx)
+        {
+            if (wdEx.Message.Contains("unknown error: unexpected command response"))
+            {
+                result = false;
+                Log.Warning(wdEx, "Chrome version 103 bug");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
         Log.Information("Login? {Result}", result);
 
         return new HomePage(_driver);
