@@ -1,5 +1,7 @@
+using System.Collections.ObjectModel;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
+using Polly;
 using SeleniumExtras.WaitHelpers;
 using Serilog;
 
@@ -11,44 +13,48 @@ public class HomePage
 
     private readonly IWebDriver _driver;
 
-    // <div class="TOP-my TOP-nologin">
+    /// <summary>
+    /// 右上角個人資訊區塊。
+    /// </summary>
+    /// <remarks>
+    /// &lt;div class="TOP-my TOP-nologin"&gt;
+    /// </remarks>
     private readonly By _avatarBy = By.ClassName("TOP-my");
 
-    // <a id="signin-btn" onclick="Signin.showSigninMap();">
+    /// <summary>
+    /// 每日簽到按鈕。
+    /// </summary>
+    /// <remarks>
+    /// &lt;a id="signin-btn" onclick="Signin.showSigninMap();"&gt;
+    /// </remarks>
     private readonly By _signinBtnBy = By.Id("signin-btn");
 
+    /// <summary>
+    /// 每日簽到月曆。(顯示已簽到天數的儀表板)
+    /// </summary>
     // <dialog id="dialogify_{int}" class="dialogify fixed popup-dailybox" open>
     private readonly By _dailyboxDialogBy = By.CssSelector("dialog.popup-dailybox");
 
+    /// <summary>
+    /// 領取雙倍巴幣按鈕。
+    /// </summary>
     // <button class="popup-dailybox__btn" onclick="window.SigninAd.startAd();">
     private readonly By _doubleCoinsBtnBy = By.CssSelector("button.popup-dailybox__btn");
 
-    /**
-     * <dialog id="dialogify_{int}" class="dialogify fixed">
-     *   <form mehtod="dialog">
-     *     ...
-     *     <button type="submit">確定</button>
-     *     ...
-     *   </form>
-     * </dialog>
-     */
+    /// <summary>
+    /// 確認要觀看廣告的按鈕。
+    /// </summary>
     private readonly By _confirmWatchAdBtnBy = By.CssSelector("dialog > form button[type=\"submit\"]");
 
     /// <summary>
+    /// 新加入的廣告 <c>iframe</c>。
+    /// </summary>
+    /// <remarks>
     /// &lt;ins id="gpt_unit_/1017768/AD_mobileweb_signin_videorewarded_2" data-google-query-id="CI_W-6_L_PgCFQ7OfAod6sYPFA"&gt;
     /// &lt;div id="google_ads_iframe_/1017768/AD_mobileweb_signin_videorewarded_2__container__"&gt;
     /// &lt;iframe src="" id="google_ads_iframe_/1017768/AD_mobileweb_signin_videorewarded_2"&gt;
-    /// </summary>
+    /// </remarks>
     private readonly By _adIframeBy = By.CssSelector("ins[data-google-query-id] iframe");
-
-    private readonly By _resumeAdDivBy =
-        By.CssSelector("div.videoAdUi > div.rewardDialogueWrapper[style=\"\"] div.rewardResumebutton");
-
-    private readonly By _muteButtonBy =
-        By.CssSelector("div.ad-video > img[src=\"https://www.gstatic.com/dfp/native/volume_off.png\"]");
-
-    private readonly By _closeAdImgBy = By.CssSelector(
-        "div.ad-video > img[src=\"https://googleads.g.doubleclick.net/pagead/images/gmob/close-circle-30x30.png\"]");
 
     public HomePage(IWebDriver driver)
     {
@@ -77,18 +83,24 @@ public class HomePage
     /// <summary>
     /// Watch a 30 seconds ad and then receive a reward.
     /// </summary>
-    public void GetDoubleDailySignInGift()
+    public void GetDoubleDailySignInReward()
     {
         Log.Verbose("Getting double daily sign in reward");
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
         wait.IgnoreExceptionTypes(typeof(ElementClickInterceptedException));
         var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
         signinBtn.Click();
+        Log.Verbose("Clicked the signin button");
 
         var popUpDialog = _driver.FindElement(_dailyboxDialogBy);
         popUpDialog.FindElement(_doubleCoinsBtnBy).Click();
         wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
-        wait.Until(drv => drv.FindElement(_confirmWatchAdBtnBy)).Click();
+        var confirmationBtn = Policy
+            .Handle<WebDriverTimeoutException>()
+            .Retry()
+            .Execute(() => wait.Until(drv => drv.FindElement(_confirmWatchAdBtnBy)));
+        confirmationBtn.Click();
+        Log.Verbose("Clicked the confirmation button");
 
         var adIframe = _driver.FindElement(_adIframeBy);
         Log.Debug("Switching to the ad iframe");

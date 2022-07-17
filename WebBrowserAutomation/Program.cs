@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using Polly;
 using Serilog;
 using WebBrowserAutomation;
 using WebBrowserAutomation.Pages;
@@ -16,18 +17,25 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
     .CreateLogger();
 
-Task<bool> task = Bahamut.IsOperationalAsync();
+Log.Verbose("正在測試巴哈是否正常");
+Task<bool> operatingTask = Policy
+    .Handle<HttpRequestException>()
+    .Or<TaskCanceledException>()
+    .OrResult<bool>(b => b == false)
+    .WaitAndRetryAsync(new[] { TimeSpan.FromSeconds(10) })
+    .ExecuteAsync(Bahamut.IsOperationalAsync);
 
+Log.Verbose("安裝對應版本的 Chrome driver");
 new DriverManager().SetUpDriver(new ChromeConfig());
 
-const string bahaName = "巴哈姆特電玩資訊站";
-if (await task)
+const string bahaName = "巴哈姆特電玩資訊站 {Status}";
+if (await operatingTask)
 {
-    Log.Debug(bahaName + "運作正常");
+    Log.Debug(bahaName, "運作正常");
 }
 else
 {
-    Log.Fatal(bahaName + "壞了。自動結束!");
+    Log.Fatal(bahaName, "壞了");
     Log.CloseAndFlush();
     return;
 }
@@ -35,8 +43,7 @@ else
 try
 {
     using ChromeDriver driver = new();
-    //driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromMilliseconds(500);
-    Log.Debug("ChromeDriver created");
+    Log.Debug("{Driver} created", driver.GetType().Name);
 
     string username = config.GetValue<string>("BAHAMUT_USERNAME");
     string password = config.GetValue<string>("BAHAMUT_PASSWORD");
@@ -60,7 +67,16 @@ try
         return;
     }
 
-    homePage.GetDoubleDailySignInGift();
+    // var cookies = homePage.GetAllCookies();
+    // foreach (var cookie in cookies)
+    // {
+    //     Log.Verbose("{@Cookie}", cookie);
+    // }
+
+    Log.Information("Sign in? {SignInResult}", await Bahamut.IsSignedIn(null!));
+    return;
+
+    homePage.GetDoubleDailySignInReward();
 }
 catch (WebDriverException wdEx)
 {

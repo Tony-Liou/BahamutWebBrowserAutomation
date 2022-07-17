@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using Serilog;
@@ -17,12 +18,15 @@ public class GoogleAdIframe
     /// OR
     /// &lt;div id=&quot;count_down&quot; style=&quot;visibility: hidden;&quot;&gt;0 秒後可獲獎勵&lt;/div&gt;
     /// </example>
-    private readonly By _countDownBy = By.Id("count_down");
+    private readonly By _videoBoxCountDownBy = By.Id("count_down");
 
     /// <summary>
-    /// &lt;div id="close_button_icon"&gt;&lt;/div&gt;
+    /// 關閉影片按鈕。
     /// </summary>
-    private readonly By _closeButtonIconBy = By.Id("close_button_icon");
+    /// <remarks>
+    /// &lt;div id="close_button_icon"&gt;&lt;/div&gt;
+    /// </remarks>
+    private readonly By _closeVideoBoxDivBy = By.Id("close_button_icon");
 
     /// <summary>
     /// &lt;div id=&quot;close_confirmation_dialog&quot;&gt;&lt;/div&gt;
@@ -30,17 +34,29 @@ public class GoogleAdIframe
     private readonly By _closeConfirmationDialogBy = By.Id("close_confirmation_dialog");
 
     /// <summary>
-    /// &lt;div class=&quot;rewardResumebutton&quot;&gt;&lt;/div&gt;
+    /// 開始播放有聲影片前的確認。
     /// </summary>
     /// <remarks>
-    /// Before playing the ad. Full frame ad.
+    /// &lt;div class=&quot;rewardResumebutton&quot;&gt;&lt;/div&gt;
     /// </remarks>
     private readonly By _resumeAdDivBy =
         By.CssSelector("div.videoAdUi > div.rewardDialogueWrapper[style=\"\"] div.rewardResumebutton");
 
-    private readonly By _fullAdCountDownBy = By.CssSelector("");
+    /// <summary>
+    /// 滿版廣告影片的倒數時間<c>div</c>
+    /// </summary>
+    /// <remarks>
+    /// &lt;div class="rewardedAdUiAttribution"&gt;獎勵將於 5 秒後發放&lt;/div&gt;
+    /// </remarks>
+    private readonly By _fullFrameAdCountDownBy = By.CssSelector("div.rewardedAdUiAttribution");
 
-    private readonly By _closeAdImgBy = By.CssSelector(
+    /// <summary>
+    /// 關閉滿版影片按鈕。
+    /// </summary>
+    /// <remarks>
+    /// &lt;img src="https://googleads.g.doubleclick.net/pagead/images/gmob/close-circle-30x30.png"&gt;
+    /// </remarks>
+    private readonly By _closeFullFrameAdImgBy = By.CssSelector(
         "div.ad-video > img[src=\"https://googleads.g.doubleclick.net/pagead/images/gmob/close-circle-30x30.png\"]");
 
     private readonly IWebDriver _driver;
@@ -52,46 +68,88 @@ public class GoogleAdIframe
 
     public void WatchAdThenCloseIt()
     {
-        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
-        wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
-        try
+        IWebElement countDownDiv;
+        var adType = CheckAdType();
+        Log.Debug("Ad type: {AdType}", adType);
+
+        switch (adType)
         {
-            wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
-        }
-        catch (WebDriverTimeoutException timeoutException)
-        {
-            Log.Warning(timeoutException, "No resume button found");
+            case AdType.FullFrame:
+                WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3))
+                {
+                    PollingInterval = TimeSpan.FromMilliseconds(500)
+                };
+                wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
+                wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
+                countDownDiv = _driver.FindElement(_fullFrameAdCountDownBy);
+                break;
+            case AdType.VideoBox:
+                countDownDiv = _driver.FindElement(_videoBoxCountDownBy);
+                break;
+            case AdType.Unknown:
+            default:
+                Log.Error("Unknown ad type");
+                throw new InvalidEnumArgumentException();
         }
 
-        IWebElement? countDownDiv;
-        try
-        {
-            countDownDiv = wait.Until(drv => drv.FindElement(_countDownBy));
-        }
-        catch (WebDriverTimeoutException e)
-        {
-            string currentFrame = _driver.FindElement(By.Id("mys-content")).GetAttribute("innerHTML");
-            Log.Warning(e, "No countdown div found. Current content=[{Body}]", currentFrame);
-            countDownDiv = null;
-        }
-
-        int remainingSeconds;
-        if (countDownDiv != null)
-        {
-            string countDownInfo = countDownDiv.Text;
-            remainingSeconds = int.Parse(countDownInfo[..countDownInfo.IndexOf(' ')]);
-        }
-        else
-        {
-            remainingSeconds = 30;
-        }
-        
+        Log.Debug("Count down text: {CountDownInfo}", countDownDiv.Text);
+        int remainingSeconds = ParseCountDown(countDownDiv.Text);
+        Log.Information("Ad remaining seconds: {RemainingSeconds}", remainingSeconds);
         const int extraSec = 1;
         Task delay = Task.Delay(TimeSpan.FromSeconds(remainingSeconds + extraSec));
 
-        var crossIcon = _driver.FindElement(_closeButtonIconBy);
+        IWebElement closeIcon = adType switch
+        {
+            AdType.FullFrame => _driver.FindElement(_closeFullFrameAdImgBy),
+            AdType.VideoBox => _driver.FindElement(_closeVideoBoxDivBy),
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
         // Block this thread until the ad is finished and closed.
-        delay.ContinueWith(_ => crossIcon.Click()).Wait();
+        delay.ContinueWith(_ => closeIcon.Click()).Wait();
+    }
+
+    private AdType CheckAdType()
+    {
+        if (_driver.FindElements(By.Id("mys-wrapper")).Count == 1)
+        {
+            return AdType.VideoBox;
+        }
+
+        if (_driver.FindElements(By.Id("google-rewarded-video")).Count == 1)
+        {
+            return AdType.FullFrame;
+        }
+
+        return AdType.Unknown;
+    }
+
+    private static int ParseCountDown(string? countDown)
+    {
+        const int defaultSeconds = 30;
+        if (countDown == null)
+        {
+            return defaultSeconds;
+        }
+
+        for (int i = 0; i < countDown.Length; i++)
+        {
+            if (!char.IsDigit(countDown[i]))
+            {
+                continue;
+            }
+
+            int endIdx = countDown.IndexOf(' ', i + 1);
+            return int.Parse(countDown.Substring(i, endIdx - i));
+        }
+
+        return defaultSeconds;
+    }
+
+    enum AdType
+    {
+        VideoBox,
+        FullFrame,
+        Unknown
     }
 }
