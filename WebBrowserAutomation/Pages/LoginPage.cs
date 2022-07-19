@@ -19,6 +19,7 @@ public class LoginPage
 
     // <a id="btn-login" href="###">
     private readonly By _loginBy = By.Id("btn-login");
+
     private readonly IWebDriver _driver;
 
     public LoginPage(IWebDriver driver)
@@ -29,15 +30,15 @@ public class LoginPage
     /// <summary>
     /// Log in as a valid user.
     /// </summary>
-    /// <param name="username"></param>
-    /// <param name="password"></param>
+    /// <param name="username">巴哈姆特登入用帳號</param>
+    /// <param name="password">巴哈姆特登入用密碼</param>
     /// <exception cref="Exception">Cannot find a login form.</exception>
     public HomePage LogIn(string username, string password)
     {
         // ReSharper disable once SuspiciousTypeConversion.Global
         if (!new Uri(Url).Equals(_driver.Url))
         {
-            Log.Debug("Current URL {Url} does not match {LoginUrl}", _driver.Url, Url);
+            Log.Debug("Current URL {Url} does not match {LoginUrl}. Navigating to login URL", _driver.Url, Url);
             _driver.Navigate().GoToUrl(Url);
         }
 
@@ -53,11 +54,10 @@ public class LoginPage
         loginForm.FindElement(_loginBy).Click();
 
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
-        Uri homeUri = new(HomePage.Url);
         bool result;
         try
         {
-            result = wait.Until(e => homeUri.Equals(e.Url));
+            result = wait.Until(e => new Uri(HomePage.Url).Equals(e.Url));
         }
         catch (WebDriverException wdEx)
         {

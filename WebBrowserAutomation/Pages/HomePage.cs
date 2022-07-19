@@ -11,8 +11,6 @@ public class HomePage
 {
     public const string Url = "https://www.gamer.com.tw/";
 
-    private readonly IWebDriver _driver;
-
     /// <summary>
     /// 右上角個人資訊區塊。
     /// </summary>
@@ -56,6 +54,8 @@ public class HomePage
     /// </remarks>
     private readonly By _adIframeBy = By.CssSelector("ins[data-google-query-id] iframe");
 
+    private readonly IWebDriver _driver;
+
     public HomePage(IWebDriver driver)
     {
         // ReSharper disable once SuspiciousTypeConversion.Global
@@ -81,7 +81,7 @@ public class HomePage
     }
 
     /// <summary>
-    /// Watch a 30 seconds ad and then receive a reward.
+    /// Watch an ad and then receive a reward.
     /// </summary>
     public void GetDoubleDailySignInReward()
     {
@@ -93,7 +93,17 @@ public class HomePage
         Log.Verbose("Clicked the signin button");
 
         var popUpDialog = _driver.FindElement(_dailyboxDialogBy);
-        popUpDialog.FindElement(_doubleCoinsBtnBy).Click();
+        var doubleCoinsButton = popUpDialog.FindElement(_doubleCoinsBtnBy);
+        if (doubleCoinsButton.Enabled)
+        {
+            doubleCoinsButton.Click();
+        }
+        else
+        {
+            Log.Information("領取雙倍巴幣按鈕已停用，今日已領取(?)");
+            return;
+        }
+
         wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
         var confirmationBtn = Policy
             .Handle<WebDriverTimeoutException>()
@@ -103,12 +113,12 @@ public class HomePage
         Log.Verbose("Clicked the confirmation button");
 
         var adIframe = _driver.FindElement(_adIframeBy);
-        Log.Debug("Switching to the ad iframe");
+        Log.Verbose("Switching to the ad iframe");
         _driver.SwitchTo().Frame(adIframe);
 
         new GoogleAdIframe(_driver).WatchAdThenCloseIt();
 
-        Log.Debug("Returning to the top level");
+        Log.Verbose("Returning to the top level");
         _driver.SwitchTo().DefaultContent();
     }
 }

@@ -71,15 +71,12 @@ public class GoogleAdIframe
         IWebElement countDownDiv;
         var adType = CheckAdType();
         Log.Debug("Ad type: {AdType}", adType);
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
+        wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
 
         switch (adType)
         {
             case AdType.FullFrame:
-                WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3))
-                {
-                    PollingInterval = TimeSpan.FromMilliseconds(500)
-                };
-                wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
                 wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
                 countDownDiv = _driver.FindElement(_fullFrameAdCountDownBy);
                 break;
@@ -90,6 +87,11 @@ public class GoogleAdIframe
             default:
                 Log.Error("Unknown ad type");
                 throw new InvalidEnumArgumentException();
+        }
+
+        while (string.IsNullOrEmpty(countDownDiv.Text))
+        {
+            Log.Debug("Count down text is empty");
         }
 
         Log.Debug("Count down text: {CountDownInfo}", countDownDiv.Text);
@@ -107,21 +109,6 @@ public class GoogleAdIframe
 
         // Block this thread until the ad is finished and closed.
         delay.ContinueWith(_ => closeIcon.Click()).Wait();
-    }
-
-    private AdType CheckAdType()
-    {
-        if (_driver.FindElements(By.Id("mys-wrapper")).Count == 1)
-        {
-            return AdType.VideoBox;
-        }
-
-        if (_driver.FindElements(By.Id("google-rewarded-video")).Count == 1)
-        {
-            return AdType.FullFrame;
-        }
-
-        return AdType.Unknown;
     }
 
     private static int ParseCountDown(string? countDown)
@@ -144,6 +131,37 @@ public class GoogleAdIframe
         }
 
         return defaultSeconds;
+    }
+
+    private AdType CheckAdType()
+    {
+        if (_driver.FindElements(By.Id("mys-wrapper")).Count == 1)
+        {
+            return AdType.VideoBox;
+        }
+
+        if (_driver.FindElements(By.Id("google-rewarded-video")).Count == 1)
+        {
+            return AdType.FullFrame;
+        }
+
+        return AdType.Unknown;
+    }
+
+    /// <summary>
+    /// Used to debug the count down div.
+    /// </summary>
+    /// <param name="element">The element's innerHTML will be logged per second 10 times.</param>
+    private static async void RegularDisplay(IWebElement element)
+    {
+        await Task.Run(() =>
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                Thread.Sleep(1000);
+                Log.Debug("Current element: {Element}", element.Text);
+            }
+        });
     }
 
     enum AdType

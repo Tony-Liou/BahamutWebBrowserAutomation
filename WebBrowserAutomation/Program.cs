@@ -18,7 +18,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 Log.Verbose("正在測試巴哈是否正常");
-Task<bool> operatingTask = Policy
+var operatingTask = Policy
     .Handle<HttpRequestException>()
     .Or<TaskCanceledException>()
     .OrResult<bool>(b => b == false)
@@ -28,10 +28,10 @@ Task<bool> operatingTask = Policy
 Log.Verbose("安裝對應版本的 Chrome driver");
 new DriverManager().SetUpDriver(new ChromeConfig());
 
-const string bahaName = "巴哈姆特電玩資訊站 {Status}";
+const string bahaName = "巴哈姆特電玩資訊站{Status}";
 if (await operatingTask)
 {
-    Log.Debug(bahaName, "運作正常");
+    Log.Information(bahaName, "運作正常");
 }
 else
 {
@@ -67,16 +67,10 @@ try
         return;
     }
 
-    // var cookies = homePage.GetAllCookies();
-    // foreach (var cookie in cookies)
-    // {
-    //     Log.Verbose("{@Cookie}", cookie);
-    // }
-
-    Log.Information("Sign in? {SignInResult}", await Bahamut.IsSignedIn(null!));
-    return;
+    //Log.Information("Sign in? {SignInResult}", await Bahamut.IsSignedInAsync(null!));
 
     homePage.GetDoubleDailySignInReward();
+    //Log.Information("Sign in? {SignInResult}", await Bahamut.IsSignedInAsync(null!));
 }
 catch (WebDriverException wdEx)
 {
