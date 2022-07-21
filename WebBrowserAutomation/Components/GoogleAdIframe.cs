@@ -1,9 +1,10 @@
 using System.ComponentModel;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
+using Polly;
 using Serilog;
 
-namespace WebBrowserAutomation;
+namespace WebBrowserAutomation.Components;
 
 /// <summary>
 /// A Google ad inside an <c>iframe</c>.
@@ -29,9 +30,12 @@ public class GoogleAdIframe
     private readonly By _closeVideoBoxDivBy = By.Id("close_button_icon");
 
     /// <summary>
-    /// &lt;div id=&quot;close_confirmation_dialog&quot;&gt;&lt;/div&gt;
+    /// 靜音影片圖像。
     /// </summary>
-    private readonly By _closeConfirmationDialogBy = By.Id("close_confirmation_dialog");
+    /// <remarks>
+    /// &lt;img src="https://www.gstatic.com/dfp/native/volume_on.png"&gt;
+    /// </remarks>
+    private readonly By _muteImgBy = By.CssSelector("div#google-rewarded-video > img[src=\"https://www.gstatic.com/dfp/native/volume_on.png\"]");
 
     /// <summary>
     /// 開始播放有聲影片前的確認。
@@ -69,6 +73,7 @@ public class GoogleAdIframe
     public void WatchAdThenCloseIt()
     {
         IWebElement countDownDiv;
+        //IWebElement muteImg;
         var adType = CheckAdType();
         Log.Debug("Ad type: {AdType}", adType);
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
@@ -79,6 +84,7 @@ public class GoogleAdIframe
             case AdType.FullFrame:
                 wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
                 countDownDiv = _driver.FindElement(_fullFrameAdCountDownBy);
+                //muteImg = _driver.FindElement(_muteImgBy);
                 break;
             case AdType.VideoBox:
                 countDownDiv = _driver.FindElement(_videoBoxCountDownBy);
@@ -89,10 +95,10 @@ public class GoogleAdIframe
                 throw new InvalidEnumArgumentException();
         }
 
-        while (string.IsNullOrEmpty(countDownDiv.Text))
-        {
-            Log.Debug("Count down text is empty");
-        }
+        Policy
+            .HandleResult<bool>(b => b)
+            .WaitAndRetry(new[] { TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3) })
+            .Execute(() => string.IsNullOrEmpty(countDownDiv.Text));
 
         Log.Debug("Count down text: {CountDownInfo}", countDownDiv.Text);
         int remainingSeconds = ParseCountDown(countDownDiv.Text);
@@ -113,23 +119,21 @@ public class GoogleAdIframe
 
     private static int ParseCountDown(string? countDown)
     {
-        const int defaultSeconds = 30;
-        if (countDown == null)
+        if (countDown != null)
         {
-            return defaultSeconds;
-        }
-
-        for (int i = 0; i < countDown.Length; i++)
-        {
-            if (!char.IsDigit(countDown[i]))
+            for (int i = 0; i < countDown.Length; i++)
             {
-                continue;
-            }
+                if (!char.IsDigit(countDown[i]))
+                {
+                    continue;
+                }
 
-            int endIdx = countDown.IndexOf(' ', i + 1);
-            return int.Parse(countDown.Substring(i, endIdx - i));
+                int endIdx = countDown.IndexOf(' ', i + 1);
+                return int.Parse(countDown.Substring(i, endIdx - i));
+            }
         }
 
+        const int defaultSeconds = 40;
         return defaultSeconds;
     }
 
@@ -146,22 +150,6 @@ public class GoogleAdIframe
         }
 
         return AdType.Unknown;
-    }
-
-    /// <summary>
-    /// Used to debug the count down div.
-    /// </summary>
-    /// <param name="element">The element's innerHTML will be logged per second 10 times.</param>
-    private static async void RegularDisplay(IWebElement element)
-    {
-        await Task.Run(() =>
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                Thread.Sleep(1000);
-                Log.Debug("Current element: {Element}", element.Text);
-            }
-        });
     }
 
     enum AdType

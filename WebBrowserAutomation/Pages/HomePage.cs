@@ -4,6 +4,7 @@ using OpenQA.Selenium.Support.UI;
 using Polly;
 using SeleniumExtras.WaitHelpers;
 using Serilog;
+using WebBrowserAutomation.Components;
 
 namespace WebBrowserAutomation.Pages;
 
