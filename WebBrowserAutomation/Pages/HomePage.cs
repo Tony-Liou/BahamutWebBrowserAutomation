@@ -88,7 +88,6 @@ public class HomePage
     {
         Log.Verbose("Getting double daily sign in reward");
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
-        wait.IgnoreExceptionTypes(typeof(ElementClickInterceptedException));
         var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
         signinBtn.Click();
         Log.Verbose("Clicked the signin button");
