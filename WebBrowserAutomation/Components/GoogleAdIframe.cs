@@ -35,7 +35,8 @@ public class GoogleAdIframe
     /// <remarks>
     /// &lt;img src="https://www.gstatic.com/dfp/native/volume_on.png"&gt;
     /// </remarks>
-    private readonly By _muteImgBy = By.CssSelector("div#google-rewarded-video > img[src=\"https://www.gstatic.com/dfp/native/volume_on.png\"]");
+    private readonly By _muteImgBy =
+        By.CssSelector("div#google-rewarded-video > img[src=\"https://www.gstatic.com/dfp/native/volume_on.png\"]");
 
     /// <summary>
     /// 開始播放有聲影片前的確認。
@@ -70,6 +71,10 @@ public class GoogleAdIframe
         _driver = driver;
     }
 
+    /// <summary>
+    /// Check the ad type, get remaining time and close the ad when it finished.
+    /// </summary>
+    /// <exception cref="InvalidEnumArgumentException">An unknown type of ad.</exception>
     public void WatchAdThenCloseIt()
     {
         IWebElement countDownDiv;
@@ -91,8 +96,7 @@ public class GoogleAdIframe
                 break;
             case AdType.Unknown:
             default:
-                Log.Error("Unknown ad type");
-                throw new InvalidEnumArgumentException();
+                throw new InvalidEnumArgumentException("Unknown ad type");
         }
 
         Policy
@@ -110,7 +114,7 @@ public class GoogleAdIframe
         {
             AdType.FullFrame => _driver.FindElement(_closeFullFrameAdImgBy),
             AdType.VideoBox => _driver.FindElement(_closeVideoBoxDivBy),
-            _ => throw new ArgumentOutOfRangeException()
+            //_ => throw new InvalidEnumArgumentException()
         };
 
         // Block this thread until the ad is finished and closed.

@@ -49,8 +49,6 @@ public class HomePage
     /// 新加入的廣告 <c>iframe</c>。
     /// </summary>
     /// <remarks>
-    /// &lt;ins id="gpt_unit_/1017768/AD_mobileweb_signin_videorewarded_2" data-google-query-id="CI_W-6_L_PgCFQ7OfAod6sYPFA"&gt;
-    /// &lt;div id="google_ads_iframe_/1017768/AD_mobileweb_signin_videorewarded_2__container__"&gt;
     /// &lt;iframe src="" id="google_ads_iframe_/1017768/AD_mobileweb_signin_videorewarded_2"&gt;
     /// </remarks>
     private readonly By _adIframeBy = By.CssSelector("ins[data-google-query-id] iframe");
@@ -120,5 +118,10 @@ public class HomePage
 
         Log.Verbose("Returning to the top level");
         _driver.SwitchTo().DefaultContent();
+    }
+
+    public ReadOnlyCollection<Cookie> GetAllCookies()
+    {
+        return _driver.Manage().Cookies.AllCookies;
     }
 }

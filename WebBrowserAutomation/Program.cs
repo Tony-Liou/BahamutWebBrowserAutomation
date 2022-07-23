@@ -9,6 +9,7 @@ using WebBrowserAutomation;
 using WebBrowserAutomation.Pages;
 using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
+using Cookie = System.Net.Cookie;
 
 using IHost host = Host.CreateDefaultBuilder(args).Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
@@ -49,7 +50,8 @@ try
     string password = config.GetValue<string>("BAHAMUT_PASSWORD");
     if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
     {
-        throw new InvalidOperationException("Login credentials is missing");
+        Log.Fatal("The login credential is missing");
+        return;
     }
 
     Log.Debug("Got login credentials");
@@ -67,10 +69,12 @@ try
         return;
     }
 
-    //Log.Information("Sign in? {SignInResult}", await Bahamut.IsSignedInAsync(null!));
-
+    Log.Information("嘗試獲得雙倍簽到獎勵");
     homePage.GetDoubleDailySignInReward();
-    //Log.Information("Sign in? {SignInResult}", await Bahamut.IsSignedInAsync(null!));
+    Log.Information("已獲得雙倍簽到獎勵");
+
+    var cookies = ConvertSeleniumCookiesToBuiltInCookies(homePage.GetAllCookies());
+    Log.Information("Signed in today? {SignInResult}", await Bahamut.IsSignedInAsync(cookies));
 }
 catch (WebDriverException wdEx)
 {
@@ -83,4 +87,15 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+static List<Cookie> ConvertSeleniumCookiesToBuiltInCookies(IReadOnlyCollection<OpenQA.Selenium.Cookie> seleniumCookies)
+{
+    List<Cookie> cookieList = new(seleniumCookies.Count);
+    cookieList.AddRange(seleniumCookies.Select(seCookie =>
+        new Cookie(seCookie.Name, seCookie.Value, seCookie.Path, seCookie.Domain)
+        {
+            Secure = seCookie.Secure, HttpOnly = seCookie.IsHttpOnly, Expires = seCookie.Expiry ?? DateTime.MinValue
+        }));
+    return cookieList;
 }
