@@ -12,7 +12,7 @@
 
    *注意請不要下載到 **.NET Framework**，此專案使用 **.NET 6** 為目標框架。*
 2. 安裝 IDE 或編輯器，推薦 [Visual Studio](https://visualstudio.microsoft.com/zh-hant/downloads/) 2022 以上或 [Rider](https://www.jetbrains.com/rider/) 2022.1 以上。
-3. 目前預設瀏覽器為 [Google Chrome](https://www.google.com/)。
+3. 目前預設瀏覽器為 [Google Chrome](https://www.google.com/intl/zh-TW/chrome/)。
 
 ### Configuration
 
