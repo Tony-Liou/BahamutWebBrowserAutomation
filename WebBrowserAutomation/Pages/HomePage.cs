@@ -12,6 +12,8 @@ public class HomePage
 {
     public const string Url = "https://www.gamer.com.tw/";
 
+    private const string NotLoggedInClassName = "TOP-nologin";
+    
     /// <summary>
     /// 右上角個人資訊區塊。
     /// </summary>
@@ -32,7 +34,7 @@ public class HomePage
     /// 每日簽到月曆。(顯示已簽到天數的儀表板)
     /// </summary>
     // <dialog id="dialogify_{int}" class="dialogify fixed popup-dailybox" open>
-    private readonly By _dailyboxDialogBy = By.CssSelector("dialog.popup-dailybox");
+    private readonly By _dailyBoxDialogBy = By.CssSelector("dialog.popup-dailybox");
 
     /// <summary>
     /// 領取雙倍巴幣按鈕。
@@ -71,12 +73,12 @@ public class HomePage
         Log.Verbose("Checking the personal avatar is existent");
 
         var divClass = _driver.FindElement(_avatarBy).GetAttribute("class");
-        return !divClass.Contains("TOP-nologin");
+        return !divClass.Contains(NotLoggedInClassName);
     }
 
     public void ClickLoginLink()
     {
-        _driver.FindElement(By.CssSelector("div.TOP-nologin > a:first-child")).Click();
+        _driver.FindElement(By.CssSelector($"div.{NotLoggedInClassName} > a:first-child")).Click();
     }
 
     /// <summary>
@@ -87,10 +89,18 @@ public class HomePage
         Log.Verbose("Getting double daily sign in reward");
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
         var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
-        signinBtn.Click();
-        Log.Verbose("Clicked the signin button");
+        try
+        {
+            signinBtn.Click();
+            Log.Verbose("Clicked the signin button");
+        }
+        catch (ElementClickInterceptedException clickEx)
+        {
+            Log.Warning(clickEx, "The signin button is not clickable. Execute JS instead");
+            ((IJavaScriptExecutor)_driver).ExecuteScript("Signin.showSigninMap();");
+        }
 
-        var popUpDialog = _driver.FindElement(_dailyboxDialogBy);
+        var popUpDialog = _driver.FindElement(_dailyBoxDialogBy);
         var doubleCoinsButton = popUpDialog.FindElement(_doubleCoinsBtnBy);
         if (doubleCoinsButton.Enabled)
         {
@@ -98,7 +108,7 @@ public class HomePage
         }
         else
         {
-            Log.Information("領取雙倍巴幣按鈕已停用，今日已領取(?)");
+            Log.Information("領取雙倍巴幣按鈕已停用，今日已領取？");
             return;
         }
 

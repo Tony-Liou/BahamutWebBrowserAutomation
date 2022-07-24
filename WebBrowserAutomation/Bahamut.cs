@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 
 namespace WebBrowserAutomation;
 
-public class Bahamut
+public static class Bahamut
 {
     public const string BaseUrl = "https://www.gamer.com.tw";
 

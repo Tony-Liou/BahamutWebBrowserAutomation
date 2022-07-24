@@ -8,16 +8,36 @@ public class LoginPage
 {
     public const string Url = "https://user.gamer.com.tw/login.php";
 
-    // <form id="form-login" method="post">
+    /// <summary>
+    /// A login <c>form</c>.
+    /// </summary>
+    /// <remarks>
+    /// &lt;form id="form-login" method="post"&gt;
+    /// </remarks>
     private readonly By _loginFormBy = By.Id("form-login");
 
-    // <input name="userid" type="text">
+    /// <summary>
+    /// An <c>input</c> element for username.
+    /// </summary>
+    /// <remarks>
+    /// <c>&lt;input name="userid" type="text"&gt;</c>
+    /// </remarks>
     private readonly By _userIdBy = By.Name("userid");
 
-    // <input name="password" type="password">
+    /// <summary>
+    /// An <c>input</c> element for password.
+    /// </summary>
+    /// <remarks>
+    /// <c>&lt;input name="password" type="password"&gt;</c>
+    /// </remarks>
     private readonly By _passwordBy = By.Name("password");
 
-    // <a id="btn-login" href="###">
+    /// <summary>
+    /// A submit button.
+    /// </summary>
+    /// <remarks>
+    /// <c>&lt;a id="btn-login" href="###"&gt;</c>
+    /// </remarks>
     private readonly By _loginBy = By.Id("btn-login");
 
     private readonly IWebDriver _driver;
@@ -32,7 +52,6 @@ public class LoginPage
     /// </summary>
     /// <param name="username">巴哈姆特登入用帳號</param>
     /// <param name="password">巴哈姆特登入用密碼</param>
-    /// <exception cref="Exception">Cannot find a login form.</exception>
     public HomePage LogIn(string username, string password)
     {
         // ReSharper disable once SuspiciousTypeConversion.Global
@@ -43,12 +62,8 @@ public class LoginPage
         }
 
         var loginForm = _driver.FindElement(_loginFormBy);
-        if (loginForm == null)
-        {
-            throw new Exception("Cannot find the login form.");
-        }
 
-        Log.Verbose("Username: {Username}, Password: {Password}", username, password);
+        //Log.Verbose("Username: {Username}, Password: {Password}", username, password);
         loginForm.FindElement(_userIdBy).SendKeys(username);
         loginForm.FindElement(_passwordBy).SendKeys(password);
         loginForm.FindElement(_loginBy).Click();
@@ -72,7 +87,7 @@ public class LoginPage
             }
         }
 
-        Log.Information("Login? {Result}", result);
+        Log.Information("Logged in? {Result}", result);
 
         return new HomePage(_driver);
     }

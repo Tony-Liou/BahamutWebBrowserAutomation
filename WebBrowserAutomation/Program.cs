@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,14 +10,44 @@ using WebBrowserAutomation;
 using WebBrowserAutomation.Pages;
 using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
+using ChromeOptions = WebBrowserAutomation.Configurations.ChromeOptions;
 using Cookie = System.Net.Cookie;
 
 using IHost host = Host.CreateDefaultBuilder(args).Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
+var config = host.Services.GetRequiredService<IConfiguration>();
+var environment = host.Services.GetRequiredService<IHostEnvironment>();
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
     .CreateLogger();
+
+#region Log debug info
+
+Log.Debug(".NET environment: {Environment}", environment.EnvironmentName);
+
+OSPlatform osPlatform;
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    osPlatform = OSPlatform.Windows;
+}
+else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+{
+    osPlatform = OSPlatform.Linux;
+}
+else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+{
+    osPlatform = OSPlatform.OSX;
+}
+else
+{
+    osPlatform = OSPlatform.FreeBSD;
+}
+
+Log.Debug("OS platform: {OS}", osPlatform);
+
+#endregion
+
+#region Determine the target website's status
 
 Log.Verbose("正在測試巴哈是否正常");
 var operatingTask = Policy
@@ -29,21 +60,32 @@ var operatingTask = Policy
 Log.Verbose("安裝對應版本的 Chrome driver");
 new DriverManager().SetUpDriver(new ChromeConfig());
 
-const string bahaName = "巴哈姆特電玩資訊站{Status}";
+const string bahaStatusTemplate = "巴哈姆特電玩資訊站{Status}";
 if (await operatingTask)
 {
-    Log.Information(bahaName, "運作正常");
+    Log.Information(bahaStatusTemplate, "運作正常");
 }
 else
 {
-    Log.Fatal(bahaName, "壞了");
+    Log.Fatal(bahaStatusTemplate, "壞了");
     Log.CloseAndFlush();
     return;
 }
 
+#endregion
+
+var chromeConfig = config.GetSection(nameof(ChromeOptions)).Get<ChromeOptions>();
+OpenQA.Selenium.Chrome.ChromeOptions options = new();
+options.AddArguments(chromeConfig.Arguments ?? Array.Empty<string>());
+ChromeDriverService service = ChromeDriverService.CreateDefaultService();
+service.SuppressInitialDiagnosticInformation = chromeConfig.SuppressInitialDiagnosticInformation;
+service.HideCommandPromptWindow = chromeConfig.HideCommandPromptWindow;
+
 try
 {
-    using ChromeDriver driver = new();
+    #region Main process
+
+    using ChromeDriver driver = new(service, options);
     Log.Debug("{Driver} created", driver.GetType().Name);
 
     string username = config.GetValue<string>("BAHAMUT_USERNAME");
@@ -71,10 +113,12 @@ try
 
     Log.Information("嘗試獲得雙倍簽到獎勵");
     homePage.GetDoubleDailySignInReward();
-    Log.Information("已獲得雙倍簽到獎勵");
+    Log.Information("獲得雙倍簽到獎勵結束");
 
     var cookies = ConvertSeleniumCookiesToBuiltInCookies(homePage.GetAllCookies());
     Log.Information("Signed in today? {SignInResult}", await Bahamut.IsSignedInAsync(cookies));
+
+    #endregion
 }
 catch (WebDriverException wdEx)
 {
@@ -89,6 +133,8 @@ finally
     Log.CloseAndFlush();
 }
 
+#region Local functions
+
 static List<Cookie> ConvertSeleniumCookiesToBuiltInCookies(IReadOnlyCollection<OpenQA.Selenium.Cookie> seleniumCookies)
 {
     List<Cookie> cookieList = new(seleniumCookies.Count);
@@ -99,3 +145,5 @@ static List<Cookie> ConvertSeleniumCookiesToBuiltInCookies(IReadOnlyCollection<O
         }));
     return cookieList;
 }
+
+#endregion

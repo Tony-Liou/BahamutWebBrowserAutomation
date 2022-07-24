@@ -29,6 +29,7 @@ public class GoogleAdIframe
     /// </remarks>
     private readonly By _closeVideoBoxDivBy = By.Id("close_button_icon");
 
+/*
     /// <summary>
     /// 靜音影片圖像。
     /// </summary>
@@ -37,6 +38,7 @@ public class GoogleAdIframe
     /// </remarks>
     private readonly By _muteImgBy =
         By.CssSelector("div#google-rewarded-video > img[src=\"https://www.gstatic.com/dfp/native/volume_on.png\"]");
+*/
 
     /// <summary>
     /// 開始播放有聲影片前的確認。
@@ -105,23 +107,24 @@ public class GoogleAdIframe
             .Execute(() => string.IsNullOrEmpty(countDownDiv.Text));
 
         Log.Debug("Count down text: {CountDownInfo}", countDownDiv.Text);
-        int remainingSeconds = ParseCountDown(countDownDiv.Text);
+        int remainingSeconds = ParseCountDownSeconds(countDownDiv.Text);
         Log.Information("Ad remaining seconds: {RemainingSeconds}", remainingSeconds);
         const int extraSec = 1;
         Task delay = Task.Delay(TimeSpan.FromSeconds(remainingSeconds + extraSec));
 
+#pragma warning disable CS8509
         IWebElement closeIcon = adType switch
+#pragma warning restore CS8509
         {
             AdType.FullFrame => _driver.FindElement(_closeFullFrameAdImgBy),
-            AdType.VideoBox => _driver.FindElement(_closeVideoBoxDivBy),
-            //_ => throw new InvalidEnumArgumentException()
+            AdType.VideoBox => _driver.FindElement(_closeVideoBoxDivBy)
         };
 
         // Block this thread until the ad is finished and closed.
         delay.ContinueWith(_ => closeIcon.Click()).Wait();
     }
 
-    private static int ParseCountDown(string? countDown)
+    private static int ParseCountDownSeconds(string? countDown)
     {
         if (countDown != null)
         {
