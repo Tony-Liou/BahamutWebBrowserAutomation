@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Web;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,6 +8,7 @@ using OpenQA.Selenium.Chrome;
 using Polly;
 using Serilog;
 using WebBrowserAutomation;
+using WebBrowserAutomation.Configurations;
 using WebBrowserAutomation.Pages;
 using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
@@ -87,6 +89,8 @@ try
 
     using ChromeDriver driver = new(service, options);
     Log.Debug("{Driver} created", driver.GetType().Name);
+    AssignGlobalConfig(config);
+    driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(Global.SeleniumOptions.ImplicitWaitInSec);
 
     string username = config.GetValue<string>("BAHAMUT_USERNAME");
     string password = config.GetValue<string>("BAHAMUT_PASSWORD");
@@ -135,11 +139,16 @@ finally
 
 #region Local functions
 
+static void AssignGlobalConfig(IConfiguration config)
+{
+    Global.SeleniumOptions = config.GetSection(nameof(SeleniumOptions)).Get<SeleniumOptions>();
+}
+
 static List<Cookie> ConvertSeleniumCookiesToBuiltInCookies(IReadOnlyCollection<OpenQA.Selenium.Cookie> seleniumCookies)
 {
     List<Cookie> cookieList = new(seleniumCookies.Count);
     cookieList.AddRange(seleniumCookies.Select(seCookie =>
-        new Cookie(seCookie.Name, seCookie.Value, seCookie.Path, seCookie.Domain)
+        new Cookie(seCookie.Name, HttpUtility.UrlEncode(seCookie.Value), seCookie.Path, seCookie.Domain)
         {
             Secure = seCookie.Secure, HttpOnly = seCookie.IsHttpOnly, Expires = seCookie.Expiry ?? DateTime.MinValue
         }));

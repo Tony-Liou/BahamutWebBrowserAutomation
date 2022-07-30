@@ -29,17 +29,6 @@ public class GoogleAdIframe
     /// </remarks>
     private readonly By _closeVideoBoxDivBy = By.Id("close_button_icon");
 
-/*
-    /// <summary>
-    /// 靜音影片圖像。
-    /// </summary>
-    /// <remarks>
-    /// &lt;img src="https://www.gstatic.com/dfp/native/volume_on.png"&gt;
-    /// </remarks>
-    private readonly By _muteImgBy =
-        By.CssSelector("div#google-rewarded-video > img[src=\"https://www.gstatic.com/dfp/native/volume_on.png\"]");
-*/
-
     /// <summary>
     /// 開始播放有聲影片前的確認。
     /// </summary>
@@ -80,10 +69,12 @@ public class GoogleAdIframe
     public void WatchAdThenCloseIt()
     {
         IWebElement countDownDiv;
-        //IWebElement muteImg;
         var adType = CheckAdType();
         Log.Debug("Ad type: {AdType}", adType);
-        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
+        {
+            PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
+        };
         wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
 
         switch (adType)
@@ -91,7 +82,6 @@ public class GoogleAdIframe
             case AdType.FullFrame:
                 wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
                 countDownDiv = _driver.FindElement(_fullFrameAdCountDownBy);
-                //muteImg = _driver.FindElement(_muteImgBy);
                 break;
             case AdType.VideoBox:
                 countDownDiv = _driver.FindElement(_videoBoxCountDownBy);
@@ -101,6 +91,7 @@ public class GoogleAdIframe
                 throw new InvalidEnumArgumentException("Unknown ad type");
         }
 
+        // Wait the text of the count down div to be displayed.
         Policy
             .HandleResult<bool>(b => b)
             .WaitAndRetry(new[] { TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3) })

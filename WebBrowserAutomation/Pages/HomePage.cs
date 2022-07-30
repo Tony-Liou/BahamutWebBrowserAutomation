@@ -13,7 +13,7 @@ public class HomePage
     public const string Url = "https://www.gamer.com.tw/";
 
     private const string NotLoggedInClassName = "TOP-nologin";
-    
+
     /// <summary>
     /// 右上角個人資訊區塊。
     /// </summary>
@@ -39,7 +39,9 @@ public class HomePage
     /// <summary>
     /// 領取雙倍巴幣按鈕。
     /// </summary>
-    // <button class="popup-dailybox__btn" onclick="window.SigninAd.startAd();">
+    /// <remarks>
+    /// &lt;button class="popup-dailybox__btn" onclick="window.SigninAd.startAd();"&gt;
+    /// </remarks>
     private readonly By _doubleCoinsBtnBy = By.CssSelector("button.popup-dailybox__btn");
 
     /// <summary>
@@ -59,15 +61,14 @@ public class HomePage
 
     public HomePage(IWebDriver driver)
     {
-        // ReSharper disable once SuspiciousTypeConversion.Global
-        if (!new Uri(Url).Equals(driver.Url))
-        {
-            Log.Fatal("Current url {Url} is not {HomeUrl}", driver.Url, Url);
-        }
-
         _driver = driver;
+        LogWebDriverState();
     }
 
+    /// <summary>
+    /// Check the top right corner of the page to find whether a personal avatar is displayed.
+    /// </summary>
+    /// <returns><c>true</c> if found the avatar; otherwise, <c>false</c>.</returns>
     public bool IsLoggedIn()
     {
         Log.Verbose("Checking the personal avatar is existent");
@@ -87,7 +88,10 @@ public class HomePage
     public void GetDoubleDailySignInReward()
     {
         Log.Verbose("Getting double daily sign in reward");
-        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
+        {
+            PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
+        };
         var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
         try
         {
@@ -104,7 +108,17 @@ public class HomePage
         var doubleCoinsButton = popUpDialog.FindElement(_doubleCoinsBtnBy);
         if (doubleCoinsButton.Enabled)
         {
-            doubleCoinsButton.Click();
+            wait.Until(ExpectedConditions.ElementToBeClickable(doubleCoinsButton));
+            try
+            {
+                doubleCoinsButton.Click();
+                Log.Verbose("Clicked the watch ad button");
+            }
+            catch (ElementClickInterceptedException clickEx)
+            {
+                Log.Warning(clickEx, "The watch ad button is not clickable. Execute JS instead");
+                ((IJavaScriptExecutor)_driver).ExecuteScript("window.SigninAd.startAd();");
+            }
         }
         else
         {
@@ -130,8 +144,14 @@ public class HomePage
         _driver.SwitchTo().DefaultContent();
     }
 
-    public ReadOnlyCollection<Cookie> GetAllCookies()
+    public ReadOnlyCollection<Cookie> GetAllCookies() => _driver.Manage().Cookies.AllCookies;
+
+    private void LogWebDriverState()
     {
-        return _driver.Manage().Cookies.AllCookies;
+        // ReSharper disable once SuspiciousTypeConversion.Global
+        if (!new Uri(Url).Equals(_driver.Url))
+        {
+            Log.Error("Current url {Url} is not {HomeUrl}", _driver.Url, Url);
+        }
     }
 }

@@ -4,6 +4,8 @@ using Serilog;
 
 namespace WebBrowserAutomation.Pages;
 
+// ReSharper disable SuspiciousTypeConversion.Global
+
 public class LoginPage
 {
     public const string Url = "https://user.gamer.com.tw/login.php";
@@ -54,7 +56,6 @@ public class LoginPage
     /// <param name="password">巴哈姆特登入用密碼</param>
     public HomePage LogIn(string username, string password)
     {
-        // ReSharper disable once SuspiciousTypeConversion.Global
         if (!new Uri(Url).Equals(_driver.Url))
         {
             Log.Debug("Current URL {Url} does not match {LoginUrl}. Navigating to login URL", _driver.Url, Url);
@@ -62,13 +63,14 @@ public class LoginPage
         }
 
         var loginForm = _driver.FindElement(_loginFormBy);
-
-        //Log.Verbose("Username: {Username}, Password: {Password}", username, password);
         loginForm.FindElement(_userIdBy).SendKeys(username);
         loginForm.FindElement(_passwordBy).SendKeys(password);
         loginForm.FindElement(_loginBy).Click();
 
-        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(3)) { PollingInterval = TimeSpan.FromMilliseconds(500) };
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
+        {
+            PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
+        };
         bool result;
         try
         {

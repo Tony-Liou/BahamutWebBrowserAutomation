@@ -1,12 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
+using Serilog;
+using WebBrowserAutomation.Pages;
 
 namespace WebBrowserAutomation;
 
 public static class Bahamut
 {
-    public const string BaseUrl = "https://www.gamer.com.tw";
-
     /// <summary>
     /// DO NOT modify this field directly. Use <see cref="Client"/> instead.
     /// </summary>
@@ -24,7 +24,7 @@ public static class Bahamut
     {
         get
         {
-            return _client ??= new HttpClient { BaseAddress = new Uri(BaseUrl) };
+            return _client ??= new HttpClient { BaseAddress = new Uri(HomePage.Url) };
         }
     }
 
@@ -50,7 +50,7 @@ public static class Bahamut
     }
 
     /// <summary>
-    /// Check whether it was signed in today.
+    /// Check whether the user owning this <paramref name="cookieCollection"/> is signed in today.
     /// </summary>
     /// <param name="cookieCollection">All cookies in the Bahamut domain.</param>
     /// <returns><c>true</c> if today is signed in; otherwise, <c>false</c>.</returns>
@@ -60,12 +60,13 @@ public static class Bahamut
         CookieContainer cookies = new();
         foreach (var cookie in cookieCollection)
         {
+            Log.Verbose("Cookie: {@Cookie}", cookie);
             cookies.Add(cookie);
         }
 
         ClientHandler.CookieContainer = cookies;
         FormUrlEncodedContent httpContent = new(new[] { new KeyValuePair<string, string>("action", "2") });
-        using HttpClient client = new(ClientHandler, false) { BaseAddress = new Uri(BaseUrl) };
+        using HttpClient client = new(ClientHandler, false) { BaseAddress = new Uri(HomePage.Url) };
         var resp = await client.PostAsync("/ajax/signin.php", httpContent);
         var body = await resp.Content.ReadFromJsonAsync<SignIn>();
 
@@ -74,5 +75,5 @@ public static class Bahamut
 
     record SignIn(Data Data);
 
-    record Data(int Days, int FinishedAd, int PrjSigninDays, int Signin);
+    readonly record struct Data(int Days, int FinishedAd, int PrjSigninDays, int Signin);
 }
