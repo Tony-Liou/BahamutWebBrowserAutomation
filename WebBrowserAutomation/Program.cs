@@ -23,33 +23,13 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
     .CreateLogger();
 
-#region Log debug info
+Log.Verbose("Logging configured");
 
-Log.Debug(".NET environment: {Environment}", environment.EnvironmentName);
-
-OSPlatform osPlatform;
-if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+if (environment.IsDevelopment())
 {
-    osPlatform = OSPlatform.Windows;
-}
-else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-{
-    osPlatform = OSPlatform.Linux;
-}
-else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-{
-    osPlatform = OSPlatform.OSX;
-}
-else
-{
-    osPlatform = OSPlatform.FreeBSD;
+    LogRuntimeEnvironment(environment);
 }
 
-Log.Debug("OS platform: {OS}", osPlatform);
-
-#endregion
-
-#region Determine the target website's status
 
 Log.Verbose("正在測試巴哈是否正常");
 var operatingTask = Policy
@@ -69,12 +49,13 @@ if (await operatingTask)
 }
 else
 {
-    Log.Fatal(bahaStatusTemplate, "壞了");
+    Log.Fatal(bahaStatusTemplate, "壞了88");
     Log.CloseAndFlush();
     return;
 }
 
-#endregion
+
+#region Setup the Chrome driver
 
 var chromeConfig = config.GetSection(nameof(ChromeOptions)).Get<ChromeOptions>();
 OpenQA.Selenium.Chrome.ChromeOptions options = new();
@@ -83,13 +64,16 @@ ChromeDriverService service = ChromeDriverService.CreateDefaultService();
 service.SuppressInitialDiagnosticInformation = chromeConfig.SuppressInitialDiagnosticInformation;
 service.HideCommandPromptWindow = chromeConfig.HideCommandPromptWindow;
 
+#endregion
+
+Global.SeleniumOptions = config.GetSection(nameof(SeleniumOptions)).Get<SeleniumOptions>();
+
 try
 {
     #region Main process
 
     using ChromeDriver driver = new(service, options);
     Log.Debug("{Driver} created", driver.GetType().Name);
-    AssignGlobalConfig(config);
     driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(Global.SeleniumOptions.ImplicitWaitInSec);
 
     string username = config.GetValue<string>("BAHAMUT_USERNAME");
@@ -111,7 +95,7 @@ try
     }
     else
     {
-        Log.Fatal("Log in failed");
+        Log.Fatal("Login failed");
         return;
     }
 
@@ -120,7 +104,7 @@ try
     Log.Information("獲得雙倍簽到獎勵結束");
 
     var cookies = ConvertSeleniumCookiesToBuiltInCookies(homePage.GetAllCookies());
-    Log.Information("Signed in today? {SignInResult}", await Bahamut.IsSignedInAsync(cookies));
+    Log.Information("今日已簽到？{SignInResult}", await Bahamut.IsSignedInAsync(cookies));
 
     #endregion
 }
@@ -139,9 +123,30 @@ finally
 
 #region Local functions
 
-static void AssignGlobalConfig(IConfiguration config)
+// Call this function earlier for better performance.
+static void LogRuntimeEnvironment(IHostEnvironment hostEnv)
 {
-    Global.SeleniumOptions = config.GetSection(nameof(SeleniumOptions)).Get<SeleniumOptions>();
+    OSPlatform os;
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    {
+        os = OSPlatform.Windows;
+    }
+    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    {
+        os = OSPlatform.Linux;
+    }
+    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+    {
+        os = OSPlatform.OSX;
+    }
+    else
+    {
+        os = OSPlatform.FreeBSD;
+    }
+
+    Log.Debug("OS platform: {OS}", os);
+    Log.Debug(".NET environment: {Environment}", hostEnv.EnvironmentName);
+    Log.Debug("GC allocated approximately {Bytes} bytes", GC.GetTotalMemory(true));
 }
 
 static List<Cookie> ConvertSeleniumCookiesToBuiltInCookies(IReadOnlyCollection<OpenQA.Selenium.Cookie> seleniumCookies)

@@ -54,6 +54,7 @@ public class LoginPage
     /// </summary>
     /// <param name="username">巴哈姆特登入用帳號</param>
     /// <param name="password">巴哈姆特登入用密碼</param>
+    /// <returns>登入後重新導向至首頁。</returns>
     public HomePage LogIn(string username, string password)
     {
         if (!new Uri(Url).Equals(_driver.Url))
@@ -89,7 +90,7 @@ public class LoginPage
             }
         }
 
-        Log.Information("Logged in? {Result}", result);
+        Log.Information("登入後重新導向至首頁：{Result}", result);
 
         return new HomePage(_driver);
     }

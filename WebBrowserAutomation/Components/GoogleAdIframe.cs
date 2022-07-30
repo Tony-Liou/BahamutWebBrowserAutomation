@@ -99,7 +99,7 @@ public class GoogleAdIframe
 
         Log.Debug("Count down text: {CountDownInfo}", countDownDiv.Text);
         int remainingSeconds = ParseCountDownSeconds(countDownDiv.Text);
-        Log.Information("Ad remaining seconds: {RemainingSeconds}", remainingSeconds);
+        Log.Information("廣告剩餘 {RemainingSeconds} 秒", remainingSeconds);
         const int extraSec = 1;
         Task delay = Task.Delay(TimeSpan.FromSeconds(remainingSeconds + extraSec));
 
