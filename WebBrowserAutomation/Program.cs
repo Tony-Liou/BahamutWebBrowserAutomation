@@ -91,7 +91,7 @@ try
 
     if (homePage.IsLoggedIn())
     {
-        Log.Information("Logged in successfully");
+        Log.Information("登入成功");
     }
     else
     {
