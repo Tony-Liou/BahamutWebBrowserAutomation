@@ -12,6 +12,7 @@ using WebBrowserAutomation.Configurations;
 using WebBrowserAutomation.Pages;
 using WebDriverManager;
 using WebDriverManager.DriverConfigs.Impl;
+using WebDriverManager.Helpers;
 using ChromeOptions = WebBrowserAutomation.Configurations.ChromeOptions;
 using Cookie = System.Net.Cookie;
 
@@ -40,7 +41,7 @@ var operatingTask = Policy
     .ExecuteAsync(Bahamut.IsOperationalAsync);
 
 Log.Verbose("安裝對應版本的 Chrome driver");
-new DriverManager().SetUpDriver(new ChromeConfig());
+new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
 
 const string bahaStatusTemplate = "巴哈姆特電玩資訊站{Status}";
 if (await operatingTask)
