@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Web;
 using Microsoft.Extensions.Configuration;
@@ -24,98 +25,102 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
     .CreateLogger();
 
-Log.Verbose("Logging configured");
-
-if (environment.IsDevelopment())
-{
-    LogRuntimeEnvironment(environment);
-}
-
-
-Log.Verbose("正在測試巴哈是否正常");
-var operatingTask = Policy
-    .Handle<HttpRequestException>()
-    .Or<TaskCanceledException>()
-    .OrResult<bool>(b => b == false)
-    .WaitAndRetryAsync(new[] { TimeSpan.FromSeconds(10) })
-    .ExecuteAsync(Bahamut.IsOperationalAsync);
-
-Log.Verbose("安裝對應版本的 Chrome driver");
-new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
-
-const string bahaStatusTemplate = "巴哈姆特電玩資訊站{Status}";
-if (await operatingTask)
-{
-    Log.Information(bahaStatusTemplate, "運作正常");
-}
-else
-{
-    Log.Fatal(bahaStatusTemplate, "壞了88");
-    Log.CloseAndFlush();
-    return;
-}
-
-
-#region Setup the Chrome driver
-
-var chromeConfig = config.GetSection(nameof(ChromeOptions)).Get<ChromeOptions>();
-OpenQA.Selenium.Chrome.ChromeOptions options = new();
-options.AddArguments(chromeConfig.Arguments ?? Array.Empty<string>());
-ChromeDriverService service = ChromeDriverService.CreateDefaultService();
-service.SuppressInitialDiagnosticInformation = chromeConfig.SuppressInitialDiagnosticInformation;
-service.HideCommandPromptWindow = chromeConfig.HideCommandPromptWindow;
-
-#endregion
-
-Global.SeleniumOptions = config.GetSection(nameof(SeleniumOptions)).Get<SeleniumOptions>();
-
 try
 {
-    #region Main process
+    Log.Verbose("Logging configured");
 
-    using ChromeDriver driver = new(service, options);
-    Log.Debug("{Driver} created", driver.GetType().Name);
-    driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(Global.SeleniumOptions.ImplicitWaitInSec);
+    LogRuntimeEnvironment(environment);
 
-    string username = config.GetValue<string>("BAHAMUT_USERNAME");
-    string password = config.GetValue<string>("BAHAMUT_PASSWORD");
-    if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+    Log.Verbose("正在測試巴哈網站是否正常");
+    var operatingTask = Policy
+        .Handle<HttpRequestException>()
+        .Or<TaskCanceledException>()
+        .OrResult<bool>(b => b == false)
+        .WaitAndRetryAsync(new[] { TimeSpan.FromSeconds(10) })
+        .ExecuteAsync(Bahamut.IsOperationalAsync);
+
+    Log.Verbose("Installing Chrome driver");
+    Policy
+        .Handle<WebException>()
+        .WaitAndRetry(new[] { TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) }, (exception, _) =>
+        {
+            Log.Error(exception, "Install Chrome driver failed. Retrying...");
+        })
+        .Execute(() => new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser));
+
+    const string bahaStatusTemplate = "巴哈姆特電玩資訊站{Status}";
+    if (await operatingTask)
     {
-        Log.Fatal("The login credential is missing");
-        return;
-    }
-
-    Log.Debug("Got login credentials");
-
-    LoginPage loginPage = new(driver);
-    var homePage = loginPage.LogIn(username, password);
-
-    if (homePage.IsLoggedIn())
-    {
-        Log.Information("登入成功");
+        Log.Information(bahaStatusTemplate, "運作正常");
     }
     else
     {
-        Log.Fatal("Login failed");
+        Log.Fatal(bahaStatusTemplate, "壞了88");
         return;
     }
 
-    Log.Information("嘗試獲得雙倍簽到獎勵");
-    homePage.GetDoubleDailySignInReward();
-    Log.Information("獲得雙倍簽到獎勵結束");
 
-    var cookies = ConvertSeleniumCookiesToBuiltInCookies(homePage.GetAllCookies());
-    Log.Information("今日已簽到？{SignInResult}", await Bahamut.IsSignedInAsync(cookies));
+    #region Setup the Chrome driver
+
+    var chromeConfig = config.GetSection(nameof(ChromeOptions)).Get<ChromeOptions>();
+    OpenQA.Selenium.Chrome.ChromeOptions options = new();
+    options.AddArguments(chromeConfig.Arguments ?? Array.Empty<string>());
+    ChromeDriverService service = ChromeDriverService.CreateDefaultService();
+    service.SuppressInitialDiagnosticInformation = chromeConfig.SuppressInitialDiagnosticInformation;
+    service.HideCommandPromptWindow = chromeConfig.HideCommandPromptWindow;
 
     #endregion
-}
-catch (WebDriverException wdEx)
-{
-    Log.Error(wdEx, "Web driver error");
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Unexpected error occured");
+
+    Global.SeleniumOptions = config.GetSection(nameof(SeleniumOptions)).Get<SeleniumOptions>();
+
+    try
+    {
+        #region Main process
+
+        using ChromeDriver driver = new(service, options);
+        Log.Debug("{Driver} created", driver.GetType().Name);
+        driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(Global.SeleniumOptions.ImplicitWaitInSec);
+
+        string username = config.GetValue<string>("BAHAMUT_USERNAME");
+        string password = config.GetValue<string>("BAHAMUT_PASSWORD");
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            Log.Fatal("The login credential is missing");
+            return;
+        }
+
+        Log.Debug("Got login credentials");
+
+        LoginPage loginPage = new(driver);
+        var homePage = loginPage.LogIn(username, password);
+
+        if (homePage.IsLoggedIn())
+        {
+            Log.Information("登入成功");
+        }
+        else
+        {
+            Log.Fatal("Login failed");
+            return;
+        }
+
+        Log.Information("嘗試獲得雙倍簽到獎勵");
+        homePage.GetDoubleDailySignInReward();
+        Log.Information("獲得雙倍簽到獎勵結束");
+
+        var cookies = ConvertSeleniumCookiesToBuiltInCookies(homePage.GetAllCookies());
+        Log.Information("今日已簽到？{SignInResult}", await Bahamut.IsSignedInAsync(cookies));
+
+        #endregion
+    }
+    catch (WebDriverException wdEx)
+    {
+        Log.Error(wdEx, "Web driver error");
+    }
+    catch (Exception ex)
+    {
+        Log.Fatal(ex, "Unexpected error occured");
+    }
 }
 finally
 {
@@ -146,7 +151,7 @@ static void LogRuntimeEnvironment(IHostEnvironment hostEnv)
     }
 
     Log.Debug("OS platform: {OS}", os);
-    Log.Debug(".NET environment: {Environment}", hostEnv.EnvironmentName);
+    Log.Information(".NET environment: {Environment}", hostEnv.EnvironmentName);
     Log.Debug("GC allocated approximately {Bytes} bytes", GC.GetTotalMemory(true));
 }
 

@@ -5,10 +5,10 @@ using Serilog;
 namespace WebBrowserAutomation.Pages;
 
 // ReSharper disable SuspiciousTypeConversion.Global
-
 public class LoginPage
 {
-    public const string Url = "https://user.gamer.com.tw/login.php";
+    private const string Url = "https://user.gamer.com.tw/login.php";
+    private const string LoginFormId = "form-login";
 
     /// <summary>
     /// A login <c>form</c>.
@@ -16,7 +16,7 @@ public class LoginPage
     /// <remarks>
     /// &lt;form id="form-login" method="post"&gt;
     /// </remarks>
-    private readonly By _loginFormBy = By.Id("form-login");
+    private readonly By _loginFormBy = By.Id(LoginFormId);
 
     /// <summary>
     /// An <c>input</c> element for username.
@@ -42,6 +42,10 @@ public class LoginPage
     /// </remarks>
     private readonly By _loginBy = By.Id("btn-login");
 
+    private readonly By _errorMsgBy = By.CssSelector($"#{LoginFormId}+div.caption-text.red.margin-bottom.msgdiv-alert");
+
+    private readonly By _recaptchaBy = By.CssSelector("div.g-recaptcha iframe[title=\"reCAPTCHA\"]");
+
     private readonly IWebDriver _driver;
 
     public LoginPage(IWebDriver driver)
@@ -57,10 +61,9 @@ public class LoginPage
     /// <returns>登入後重新導向至首頁。</returns>
     public HomePage LogIn(string username, string password)
     {
-        if (!new Uri(Url).Equals(_driver.Url))
+        if (!Utils.PageUtils.CheckSamePage(_driver, Url))
         {
-            Log.Debug("Current URL {Url} does not match {LoginUrl}. Navigating to login URL", _driver.Url, Url);
-            _driver.Navigate().GoToUrl(Url);
+            Log.Information("Navigating to login URL");
         }
 
         var loginForm = _driver.FindElement(_loginFormBy);
@@ -72,23 +75,8 @@ public class LoginPage
         {
             PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
         };
-        bool result;
-        try
-        {
-            result = wait.Until(e => new Uri(HomePage.Url).Equals(e.Url));
-        }
-        catch (WebDriverException wdEx)
-        {
-            if (wdEx.Message.Contains("unknown error: unexpected command response"))
-            {
-                result = false;
-                Log.Warning(wdEx, "Chrome version 103 bug");
-            }
-            else
-            {
-                throw;
-            }
-        }
+
+        var result = wait.Until(e => new Uri(HomePage.Url).Equals(e.Url));
 
         Log.Information("登入後重新導向至首頁：{Result}", result);
 
