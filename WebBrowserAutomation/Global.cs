@@ -7,5 +7,6 @@ namespace WebBrowserAutomation;
 /// </summary>
 public static class Global
 {
-    public static SeleniumOptions SeleniumOptions = new();
+    public static SeleniumOptions SeleniumOptions { get; set; } = new();
 }
+

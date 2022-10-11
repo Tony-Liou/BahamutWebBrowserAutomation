@@ -1,6 +1,8 @@
 ﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using Serilog;
+using WebBrowserAutomation.Components;
+using WebBrowserAutomation.Pages.Utils;
 
 namespace WebBrowserAutomation.Pages;
 
@@ -61,7 +63,7 @@ public class LoginPage
     /// <returns>登入後重新導向至首頁。</returns>
     public HomePage LogIn(string username, string password)
     {
-        if (!Utils.PageUtils.CheckSamePage(_driver, Url))
+        if (!PageUtils.CheckSamePage(_driver, Url))
         {
             Log.Information("Navigating to login URL");
         }
@@ -70,6 +72,19 @@ public class LoginPage
         loginForm.FindElement(_userIdBy).SendKeys(username);
         loginForm.FindElement(_passwordBy).SendKeys(password);
         loginForm.FindElement(_loginBy).Click();
+
+        var loginErrorDiv = _driver.FindElement(_errorMsgBy);
+        if (loginErrorDiv.Displayed)
+        {
+            Log.Warning("巴哈帳密登入錯誤訊息: {ErrorMessage}", loginErrorDiv.Text);
+            var reCaptchaIframes = loginForm.FindElements(_recaptchaBy);
+            if (reCaptchaIframes.Any())
+            {
+                _driver.SwitchTo().Frame(reCaptchaIframes.First());
+                new ReCaptchaIframe(_driver).Solve();
+                _driver.SwitchTo().DefaultContent();
+            }
+        }
 
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
         {

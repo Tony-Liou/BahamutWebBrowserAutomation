@@ -5,6 +5,7 @@ using Polly;
 using SeleniumExtras.WaitHelpers;
 using Serilog;
 using WebBrowserAutomation.Components;
+using WebBrowserAutomation.Pages.Utils;
 
 namespace WebBrowserAutomation.Pages;
 
@@ -14,6 +15,8 @@ public class HomePage
 
     private const string NotLoggedInClassName = "TOP-nologin";
 
+    private readonly By _loginLinkBy = By.CssSelector($"div.{NotLoggedInClassName} > a:first-child");
+    
     /// <summary>
     /// 右上角個人資訊區塊。
     /// </summary>
@@ -62,7 +65,7 @@ public class HomePage
     public HomePage(IWebDriver driver)
     {
         _driver = driver;
-        LogWebDriverState();
+        PageUtils.CheckSamePage(_driver, Url);
     }
 
     /// <summary>
@@ -77,9 +80,15 @@ public class HomePage
         return !divClass.Contains(NotLoggedInClassName);
     }
 
-    public void ClickLoginLink()
+    public LoginPage ClickLoginLink()
     {
-        _driver.FindElement(By.CssSelector($"div.{NotLoggedInClassName} > a:first-child")).Click();
+        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
+        {
+            PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
+        };
+        var link = wait.Until(d => d.FindElement(_loginLinkBy));
+        link.Click();
+        return new LoginPage(_driver);
     }
 
     /// <summary>
@@ -145,13 +154,4 @@ public class HomePage
     }
 
     public ReadOnlyCollection<Cookie> GetAllCookies() => _driver.Manage().Cookies.AllCookies;
-
-    private void LogWebDriverState()
-    {
-        // ReSharper disable once SuspiciousTypeConversion.Global
-        if (!new Uri(Url).Equals(_driver.Url))
-        {
-            Log.Error("Current url {Url} is not {HomeUrl}", _driver.Url, Url);
-        }
-    }
 }

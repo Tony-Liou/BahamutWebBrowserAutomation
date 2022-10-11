@@ -2,7 +2,7 @@
 
 namespace WebBrowserAutomation.Pages.Utils;
 
-public class PageUtils
+public static class PageUtils
 {
     public static bool CheckSamePage(IWebDriver driver, string uri)
     {

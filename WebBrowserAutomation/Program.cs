@@ -42,9 +42,9 @@ try
     Log.Verbose("Installing Chrome driver");
     Policy
         .Handle<WebException>()
-        .WaitAndRetry(new[] { TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) }, (exception, _) =>
+        .WaitAndRetry(new[] { TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) }, (exception, timespan) =>
         {
-            Log.Error(exception, "Install Chrome driver failed. Retrying...");
+            Log.Error(exception, "Install Chrome driver failed. Retrying after {TimeSpan}...", timespan);
         })
         .Execute(() => new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser));
 
@@ -91,7 +91,7 @@ try
 
         Log.Debug("Got login credentials");
 
-        LoginPage loginPage = new(driver);
+        LoginPage loginPage = new HomePage(driver).ClickLoginLink();
         var homePage = loginPage.LogIn(username, password);
 
         if (homePage.IsLoggedIn())
