@@ -10,9 +10,9 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows, ubuntu]
+        osversion: [windows-latest, ubuntu-22.04]
 
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.osversion }}
 
     steps:
     - uses: actions/checkout@v3
@@ -31,5 +31,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: binary-${{ matrix.os }}
+        name: binary-${{ matrix.osversion }}
         path: publish
