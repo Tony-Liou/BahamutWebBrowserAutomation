@@ -1,12 +1,10 @@
 ﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Support.UI;
 using Serilog;
 using WebBrowserAutomation.Components;
 using WebBrowserAutomation.Pages.Utils;
 
 namespace WebBrowserAutomation.Pages;
 
-// ReSharper disable SuspiciousTypeConversion.Global
 public class LoginPage
 {
     private const string Url = "https://user.gamer.com.tw/login.php";
@@ -44,8 +42,14 @@ public class LoginPage
     /// </remarks>
     private readonly By _loginBy = By.Id("btn-login");
 
+    /// <summary>
+    /// The div of login form displaying error messages.
+    /// </summary>
     private readonly By _errorMsgBy = By.CssSelector($"#{LoginFormId}+div.caption-text.red.margin-bottom.msgdiv-alert");
 
+    /// <summary>
+    /// The reCAPTCHA iframe.
+    /// </summary>
     private readonly By _recaptchaBy = By.CssSelector("div.g-recaptcha iframe[title=\"reCAPTCHA\"]");
 
     private readonly IWebDriver _driver;
@@ -53,6 +57,11 @@ public class LoginPage
     public LoginPage(IWebDriver driver)
     {
         _driver = driver;
+
+        if (!PageUtils.CheckSamePage(_driver, Url))
+        {
+            Log.Information("Navigating to login URL");
+        }
     }
 
     /// <summary>
@@ -63,38 +72,45 @@ public class LoginPage
     /// <returns>登入後重新導向至首頁。</returns>
     public HomePage LogIn(string username, string password)
     {
-        if (!PageUtils.CheckSamePage(_driver, Url))
-        {
-            Log.Information("Navigating to login URL");
-        }
-
+        Log.Verbose("Finding login form");
         var loginForm = _driver.FindElement(_loginFormBy);
+        Log.Verbose("Login form found");
         loginForm.FindElement(_userIdBy).SendKeys(username);
         loginForm.FindElement(_passwordBy).SendKeys(password);
+        Log.Verbose("Entered username and password");
         loginForm.FindElement(_loginBy).Click();
+        Log.Information("Login form submitted");
 
-        var loginErrorDiv = _driver.FindElement(_errorMsgBy);
+        Log.Information("Wait 1 second...");
+        Task.Delay(1000).GetAwaiter().GetResult();
+
+        return new HomePage(_driver);
+    }
+
+    public void LoginFailHandler()
+    {
+        Log.Verbose("Finding login form");
+        var loginForm = _driver.FindElement(_loginFormBy);
+
+        Log.Verbose("Check the login error messages is displayed or not");
+        var loginErrorDiv = loginForm.FindElement(_errorMsgBy);
         if (loginErrorDiv.Displayed)
         {
-            Log.Warning("巴哈帳密登入錯誤訊息: {ErrorMessage}", loginErrorDiv.Text);
+            Log.Error("巴哈登入錯誤訊息: {ErrorMessage}", loginErrorDiv.Text);
             var reCaptchaIframes = loginForm.FindElements(_recaptchaBy);
             if (reCaptchaIframes.Any())
             {
-                _driver.SwitchTo().Frame(reCaptchaIframes.First());
+                Log.Debug("Found a reCAPTCHA iframe. Switching to it");
+                _driver.SwitchTo().Frame(reCaptchaIframes[0]);
                 new ReCaptchaIframe(_driver).Solve();
                 _driver.SwitchTo().DefaultContent();
             }
+            else
+            {
+                Log.Information("reCAPTCHA iframe not found");
+            }
         }
 
-        WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
-        {
-            PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
-        };
-
-        var result = wait.Until(e => new Uri(HomePage.Url).Equals(e.Url));
-
-        Log.Information("登入後重新導向至首頁：{Result}", result);
-
-        return new HomePage(_driver);
+        loginForm.FindElement(_loginBy).Click();
     }
 }

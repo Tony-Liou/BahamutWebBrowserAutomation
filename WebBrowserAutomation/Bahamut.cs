@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
+using System.Text.Json;
 using Serilog;
 using WebBrowserAutomation.Pages;
 
@@ -50,11 +50,11 @@ public static class Bahamut
     }
 
     /// <summary>
-    /// Check whether the user owning this <paramref name="cookieCollection"/> is signed in today.
+    /// Check whether the user owning this <paramref name="cookieCollection"/> has signed in today.
     /// </summary>
     /// <param name="cookieCollection">All cookies in the Bahamut domain.</param>
     /// <returns><c>true</c> if today is signed in; otherwise, <c>false</c>.</returns>
-    /// <remarks>This method create a new <see cref="HttpClient"/> instance every time you call it. Don't use it too much.</remarks>
+    /// <remarks>This method will create a new <see cref="HttpClient"/> instance and dispose it.</remarks>
     public static async Task<bool> IsSignedInAsync(IEnumerable<Cookie> cookieCollection)
     {
         CookieContainer cookies = new();
@@ -64,13 +64,20 @@ public static class Bahamut
             cookies.Add(cookie);
         }
 
+        Log.Debug("{Count} cookies in total", cookies.Count);
+
         ClientHandler.CookieContainer = cookies;
         FormUrlEncodedContent httpContent = new(new[] { new KeyValuePair<string, string>("action", "2") });
         using HttpClient client = new(ClientHandler, false) { BaseAddress = new Uri(HomePage.Url) };
         var resp = await client.PostAsync("/ajax/signin.php", httpContent);
-        var body = await resp.Content.ReadFromJsonAsync<SignIn>();
 
-        return body!.Data.Signin == 1;
+        Log.Debug("{Count} cookies in total after requesting", ClientHandler.CookieContainer.Count);
+
+        using JsonDocument document = JsonDocument.Parse(resp.Content.ReadAsStream());
+        JsonElement root = document.RootElement;
+        var signin = root.GetProperty("data").GetProperty("signin").GetInt16();
+
+        return signin == 1;
     }
 
     record SignIn(Data Data);

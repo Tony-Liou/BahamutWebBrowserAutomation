@@ -15,8 +15,11 @@ public class HomePage
 
     private const string NotLoggedInClassName = "TOP-nologin";
 
+    /// <summary>
+    /// 右上角的登入按鈕。
+    /// </summary>
     private readonly By _loginLinkBy = By.CssSelector($"div.{NotLoggedInClassName} > a:first-child");
-    
+
     /// <summary>
     /// 右上角個人資訊區塊。
     /// </summary>
@@ -66,6 +69,13 @@ public class HomePage
     {
         _driver = driver;
         PageUtils.CheckSamePage(_driver, Url);
+
+        HandleCurrentPage();
+    }
+
+    public bool IsAtHomePage()
+    {
+        return _driver.FindElements(By.XPath("/html/body/div[1]/div")).Count != 0;
     }
 
     /// <summary>
@@ -77,7 +87,16 @@ public class HomePage
         Log.Verbose("Checking the personal avatar is existent");
 
         var divClass = _driver.FindElement(_avatarBy).GetAttribute("class");
-        return !divClass.Contains(NotLoggedInClassName);
+        Log.Debug("Class of the personal avatar: {DivClass}", divClass);
+        return !divClass.Contains(NotLoggedInClassName) || IsDailyBoxDialogOpened();
+    }
+
+    public bool IsDailyBoxDialogOpened()
+    {
+        Log.Verbose("Checking the daily box dialog is opened");
+
+        var dialogs = _driver.FindElements(_dailyBoxDialogBy);
+        return dialogs.Count == 1;
     }
 
     public LoginPage ClickLoginLink()
@@ -88,32 +107,47 @@ public class HomePage
         };
         var link = wait.Until(d => d.FindElement(_loginLinkBy));
         link.Click();
+        
         return new LoginPage(_driver);
     }
 
     /// <summary>
     /// Watch an ad and then receive a reward.
     /// </summary>
-    public void GetDoubleDailySignInReward()
+    public HomePage GetDoubleDailySignInReward()
     {
         Log.Verbose("Getting double daily sign in reward");
+
         WebDriverWait wait = new(_driver, TimeSpan.FromSeconds(Global.SeleniumOptions.ExplicitWaitInSec))
         {
             PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
         };
-        var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
-        try
+        IWebElement popUpDialog;
+        
+        var dailyBoxList = _driver.FindElements(_dailyBoxDialogBy);
+        if (dailyBoxList.Count == 0)
         {
-            signinBtn.Click();
-            Log.Verbose("Clicked the signin button");
+            Log.Debug("Daily sign in dialog is not found");
+
+            var signinBtn = wait.Until(ExpectedConditions.ElementToBeClickable(_signinBtnBy));
+            try
+            {
+                signinBtn.Click();
+                Log.Verbose("Clicked the signin button");
+            }
+            catch (ElementClickInterceptedException clickEx)
+            {
+                Log.Warning(clickEx, "The signin button is not clickable. Execute JS instead");
+                ((IJavaScriptExecutor)_driver).ExecuteScript("Signin.showSigninMap();");
+            }
+
+            popUpDialog = _driver.FindElement(_dailyBoxDialogBy);
         }
-        catch (ElementClickInterceptedException clickEx)
+        else
         {
-            Log.Warning(clickEx, "The signin button is not clickable. Execute JS instead");
-            ((IJavaScriptExecutor)_driver).ExecuteScript("Signin.showSigninMap();");
+            popUpDialog = dailyBoxList[0];
         }
 
-        var popUpDialog = _driver.FindElement(_dailyBoxDialogBy);
         var doubleCoinsButton = popUpDialog.FindElement(_doubleCoinsBtnBy);
         if (doubleCoinsButton.Enabled)
         {
@@ -132,7 +166,7 @@ public class HomePage
         else
         {
             Log.Information("領取雙倍巴幣按鈕已停用，今日已領取？");
-            return;
+            return this;
         }
 
         wait.IgnoreExceptionTypes(typeof(NoSuchElementException));
@@ -151,7 +185,25 @@ public class HomePage
 
         Log.Verbose("Returning to the top level");
         _driver.SwitchTo().DefaultContent();
+
+        return this;
     }
 
     public ReadOnlyCollection<Cookie> GetAllCookies() => _driver.Manage().Cookies.AllCookies;
+
+    private void HandleCurrentPage()
+    {
+        switch (_driver.Url)
+        {
+            case Url:
+                break;
+            case SpecialEventPage.Url:
+                Log.Information("Special event page detected, redirecting to home page");
+                new SpecialEventPage(_driver).ClickGoToHomePage();
+                break;
+            default:
+                Log.Warning("The current page is not the home page");
+                break;
+        }
+    }
 }

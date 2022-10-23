@@ -4,6 +4,8 @@ namespace WebBrowserAutomation.Configurations;
 
 public class ChromeOptions
 {
+    public const string ConfigurationSectionName = "ChromeConfigs";
+    
     /// <summary>
     /// A list of arguments appended to the Chrome command line as a string array.
     /// </summary>

@@ -152,8 +152,8 @@ public class GoogleAdIframe
 
     enum AdType
     {
+        Unknown,
         VideoBox,
-        FullFrame,
-        Unknown
+        FullFrame
     }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Web;
+using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,6 +26,16 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
     .CreateLogger();
 
+var mapperConfig = new MapperConfiguration(cfg =>
+{
+    cfg.CreateMap<OpenQA.Selenium.Cookie, Cookie>().ConvertUsing(c =>
+        new Cookie(c.Name, HttpUtility.UrlEncode(c.Value), c.Path, c.Domain)
+        {
+            Secure = c.Secure, HttpOnly = c.IsHttpOnly, Expires = c.Expiry ?? DateTime.MinValue
+        });
+});
+var mapper = mapperConfig.CreateMapper();
+
 try
 {
     Log.Verbose("Logging configured");
@@ -36,17 +47,21 @@ try
         .Handle<HttpRequestException>()
         .Or<TaskCanceledException>()
         .OrResult<bool>(b => b == false)
-        .WaitAndRetryAsync(new[] { TimeSpan.FromSeconds(10) })
+        .WaitAndRetryAsync(new[] { TimeSpan.FromSeconds(10) }, (_, timeSpan) =>
+        {
+            Log.Warning("巴哈網站無法連線，等待 {TimeSpan} 秒後重試", timeSpan.TotalSeconds);
+        })
         .ExecuteAsync(Bahamut.IsOperationalAsync);
 
     Log.Verbose("Installing Chrome driver");
-    Policy
+    string driverLocation = Policy
         .Handle<WebException>()
-        .WaitAndRetry(new[] { TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) }, (exception, timespan) =>
+        .WaitAndRetry(new[] { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10) }, ((_, timeSpan) =>
         {
-            Log.Error(exception, "Install Chrome driver failed. Retrying after {TimeSpan}...", timespan);
-        })
+            Log.Warning("下載 Chrome driver 失敗，等待 {TimeSpan} 秒後重試", timeSpan.TotalSeconds);
+        }))
         .Execute(() => new DriverManager().SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser));
+    Log.Verbose("Web browser driver's location: {DriverLocation}", driverLocation);
 
     const string bahaStatusTemplate = "巴哈姆特電玩資訊站{Status}";
     if (await operatingTask)
@@ -59,10 +74,9 @@ try
         return;
     }
 
-
     #region Setup the Chrome driver
 
-    var chromeConfig = config.GetSection(nameof(ChromeOptions)).Get<ChromeOptions>();
+    var chromeConfig = config.GetSection(ChromeOptions.ConfigurationSectionName).Get<ChromeOptions>();
     OpenQA.Selenium.Chrome.ChromeOptions options = new();
     options.AddArguments(chromeConfig.Arguments ?? Array.Empty<string>());
     ChromeDriverService service = ChromeDriverService.CreateDefaultService();
@@ -71,13 +85,13 @@ try
 
     #endregion
 
-    Global.SeleniumOptions = config.GetSection(nameof(SeleniumOptions)).Get<SeleniumOptions>();
+    Global.SeleniumOptions = config.GetSection(SeleniumOptions.ConfigurationSectionName).Get<SeleniumOptions>();
 
+    using ChromeDriver driver = new(service, options);
     try
     {
         #region Main process
 
-        using ChromeDriver driver = new(service, options);
         Log.Debug("{Driver} created", driver.GetType().Name);
         driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(Global.SeleniumOptions.ImplicitWaitInSec);
 
@@ -89,10 +103,13 @@ try
             return;
         }
 
-        Log.Debug("Got login credentials");
+        Log.Verbose("Got login credentials");
 
         LoginPage loginPage = new HomePage(driver).ClickLoginLink();
         var homePage = loginPage.LogIn(username, password);
+
+        // Wait the page to load
+        await Task.Delay(1000);
 
         if (homePage.IsLoggedIn())
         {
@@ -108,14 +125,15 @@ try
         homePage.GetDoubleDailySignInReward();
         Log.Information("獲得雙倍簽到獎勵結束");
 
-        var cookies = ConvertSeleniumCookiesToBuiltInCookies(homePage.GetAllCookies());
+        var browserCookies = homePage.GetAllCookies();
+        var cookies = mapper.Map<IReadOnlyCollection<OpenQA.Selenium.Cookie>, List<Cookie>>(browserCookies);
         Log.Information("今日已簽到？{SignInResult}", await Bahamut.IsSignedInAsync(cookies));
 
         #endregion
     }
     catch (WebDriverException wdEx)
     {
-        Log.Error(wdEx, "Web driver error");
+        Log.Error(wdEx, "Web driver error. Current URL: {Url}", driver.Url);
     }
     catch (Exception ex)
     {
@@ -129,7 +147,6 @@ finally
 
 #region Local functions
 
-// Call this function earlier for better performance.
 static void LogRuntimeEnvironment(IHostEnvironment hostEnv)
 {
     OSPlatform os;
@@ -151,19 +168,10 @@ static void LogRuntimeEnvironment(IHostEnvironment hostEnv)
     }
 
     Log.Debug("OS platform: {OS}", os);
+    Log.Debug("64-bit OS: {Is64BitOS}", Environment.Is64BitOperatingSystem);
     Log.Information(".NET environment: {Environment}", hostEnv.EnvironmentName);
+    Log.Debug("Current working directory: {CurrentDirectory}", hostEnv.ContentRootPath);
     Log.Debug("GC allocated approximately {Bytes} bytes", GC.GetTotalMemory(true));
-}
-
-static List<Cookie> ConvertSeleniumCookiesToBuiltInCookies(IReadOnlyCollection<OpenQA.Selenium.Cookie> seleniumCookies)
-{
-    List<Cookie> cookieList = new(seleniumCookies.Count);
-    cookieList.AddRange(seleniumCookies.Select(seCookie =>
-        new Cookie(seCookie.Name, HttpUtility.UrlEncode(seCookie.Value), seCookie.Path, seCookie.Domain)
-        {
-            Secure = seCookie.Secure, HttpOnly = seCookie.IsHttpOnly, Expires = seCookie.Expiry ?? DateTime.MinValue
-        }));
-    return cookieList;
 }
 
 #endregion
