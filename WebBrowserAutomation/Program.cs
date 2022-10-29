@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Web;
 using AutoMapper;
@@ -21,11 +22,31 @@ using Cookie = System.Net.Cookie;
 using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration((hostingContext, configuration) =>
     {
+        configuration.Sources.Clear();
         var env = hostingContext.HostingEnvironment;
 
-        // Override the default configuration provider with the required json file
-        configuration.AddJsonFile("appsettings.json", true);
-        configuration.AddJsonFile($"appsettings.{env.EnvironmentName}.json");
+        configuration.AddJsonFile("appsettings.json", true)
+            .AddJsonFile($"appsettings.{env.EnvironmentName}.json");
+
+        if (env.IsDevelopment() && env.ApplicationName is { Length: > 0 })
+        {
+            try
+            {
+                var appAssembly = Assembly.Load(new AssemblyName(env.ApplicationName));
+                configuration.AddUserSecrets(appAssembly);
+            }
+            catch (FileNotFoundException)
+            {
+                // The assembly cannot be found, so just skip it.
+            }
+        }
+
+        configuration.AddEnvironmentVariables();
+
+        if (args is { Length: > 0 })
+        {
+            configuration.AddCommandLine(args);
+        }
     })
     .Build();
 var config = host.Services.GetRequiredService<IConfiguration>();
