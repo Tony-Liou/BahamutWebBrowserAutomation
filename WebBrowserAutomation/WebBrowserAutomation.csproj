@@ -5,6 +5,10 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>default</LangVersion>
+    <Authors>Tony Liou</Authors>
+    <RepositoryUrl>https://github.com/Tony-Liou/BahamutWebBrowserAutomation</RepositoryUrl>
+    <NeutralLanguage>zh-Hant-TW</NeutralLanguage>
   </PropertyGroup>
 
   <ItemGroup>

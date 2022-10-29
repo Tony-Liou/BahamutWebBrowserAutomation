@@ -18,7 +18,16 @@ using WebDriverManager.Helpers;
 using ChromeOptions = WebBrowserAutomation.Configurations.ChromeOptions;
 using Cookie = System.Net.Cookie;
 
-using IHost host = Host.CreateDefaultBuilder(args).Build();
+using IHost host = Host.CreateDefaultBuilder(args)
+    .ConfigureAppConfiguration((hostingContext, configuration) =>
+    {
+        var env = hostingContext.HostingEnvironment;
+
+        // Override the default configuration provider with the required json file
+        configuration.AddJsonFile("appsettings.json", true);
+        configuration.AddJsonFile($"appsettings.{env.EnvironmentName}.json");
+    })
+    .Build();
 var config = host.Services.GetRequiredService<IConfiguration>();
 var environment = host.Services.GetRequiredService<IHostEnvironment>();
 
@@ -38,7 +47,7 @@ var mapper = mapperConfig.CreateMapper();
 
 try
 {
-    Log.Verbose("Logging configured");
+    Log.Debug("Start configuring");
 
     LogRuntimeEnvironment(environment);
 
@@ -76,12 +85,15 @@ try
 
     #region Setup the Chrome driver
 
-    var chromeConfig = config.GetSection(ChromeOptions.ConfigurationSectionName).Get<ChromeOptions>();
     OpenQA.Selenium.Chrome.ChromeOptions options = new();
-    options.AddArguments(chromeConfig.Arguments ?? Array.Empty<string>());
     ChromeDriverService service = ChromeDriverService.CreateDefaultService();
-    service.SuppressInitialDiagnosticInformation = chromeConfig.SuppressInitialDiagnosticInformation;
-    service.HideCommandPromptWindow = chromeConfig.HideCommandPromptWindow;
+    var chromeConfig = config.GetSection(ChromeOptions.ConfigurationSectionName).Get<ChromeOptions>();
+    if (chromeConfig != null)
+    {
+        options.AddArguments(chromeConfig.Arguments ?? Array.Empty<string>());
+        service.SuppressInitialDiagnosticInformation = chromeConfig.SuppressInitialDiagnosticInformation;
+        service.HideCommandPromptWindow = chromeConfig.HideCommandPromptWindow;
+    }
 
     #endregion
 
