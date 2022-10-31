@@ -1,0 +1,29 @@
+name: Publish Binary
+
+on:
+  push:
+    branches: [ "production" ]
+  pull_request:
+    branches: [ "production" ]
+
+jobs:
+  publish:
+    strategy:
+      matrix:
+        os: [windows, ubuntu, macos]
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.0.x
+    - name: Publish
+      run: dotnet publish --nologo -a x64 -c Release -o publish -p:PublishSingleFile=true
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os }}x64
+        path: publish
