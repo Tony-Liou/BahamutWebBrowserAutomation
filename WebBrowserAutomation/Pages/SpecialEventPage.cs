@@ -1,4 +1,5 @@
 ﻿using OpenQA.Selenium;
+using Serilog;
 
 namespace WebBrowserAutomation.Pages;
 
@@ -23,7 +24,17 @@ class SpecialEventPage
     
     public void ClickGoToHomePage()
     {
-        var goToHomePageButton = _driver.FindElement(_homePageLinkBy);
+        IWebElement goToHomePageButton;
+        try
+        { 
+            goToHomePageButton = _driver.FindElement(_homePageLinkBy);
+        }
+        catch (NotFoundException)
+        {
+            Log.Warning("前往首頁按鈕未找到，可能已經在首頁了");
+            return;
+        }
+        
         goToHomePageButton.Click();
     }
 }
