@@ -73,10 +73,8 @@ public class HomePage
         HandleCurrentPage();
     }
 
-    public bool IsAtHomePage()
-    {
-        return _driver.FindElements(By.XPath("/html/body/div[1]/div")).Count != 0;
-    }
+    public bool IsAtHomePage() =>
+        _driver.FindElements(By.CssSelector("body > div.BA-topbg > div.BA-wrapper.BA-top")).Count != 0;
 
     /// <summary>
     /// Check the top right corner of the page to find whether a personal avatar is displayed.
@@ -107,7 +105,7 @@ public class HomePage
         };
         var link = wait.Until(d => d.FindElement(_loginLinkBy));
         link.Click();
-        
+
         return new LoginPage(_driver);
     }
 
@@ -123,7 +121,7 @@ public class HomePage
             PollingInterval = TimeSpan.FromMilliseconds(Global.SeleniumOptions.PollingIntervalInMs)
         };
         IWebElement popUpDialog;
-        
+
         var dailyBoxList = _driver.FindElements(_dailyBoxDialogBy);
         if (dailyBoxList.Count == 0)
         {
@@ -198,11 +196,19 @@ public class HomePage
             case Url:
                 break;
             case SpecialEventPage.Url:
-                Log.Information("Special event page detected, redirecting to home page");
-                new SpecialEventPage(_driver).ClickGoToHomePage();
+                Log.Information("偵測到特別活動 URL，判斷中...");
+                if (IsAtHomePage())
+                {
+                    Log.Information("在首頁，繼續執行");
+                }
+                else
+                {
+                    Log.Information("嘗試重新導向到首頁");
+                    new SpecialEventPage(_driver).ClickGoToHomePage();
+                }
                 break;
             default:
-                Log.Warning("The current page is not the home page");
+                Log.Warning("未知網址：{Url}", _driver.Url);
                 break;
         }
     }
