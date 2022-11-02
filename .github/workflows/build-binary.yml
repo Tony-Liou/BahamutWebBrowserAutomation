@@ -1,13 +1,16 @@
 name: Publish Binary
 
 on:
-  push:
-    branches: [ "production" ]
   pull_request:
-    branches: [ "production" ]
+    branches:
+      - production
+    types: 
+      - closed
 
 jobs:
   publish:
+    if: github.event.pull_request.merged == true
+    
     strategy:
       matrix:
         os: [windows, ubuntu, macos]
