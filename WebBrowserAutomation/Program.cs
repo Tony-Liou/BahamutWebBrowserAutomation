@@ -20,6 +20,7 @@ using ChromeOptions = WebBrowserAutomation.Configurations.ChromeOptions;
 using Cookie = System.Net.Cookie;
 
 using IHost host = Host.CreateDefaultBuilder(args)
+    .UseContentRoot(AppContext.BaseDirectory)
     .ConfigureAppConfiguration((hostingContext, configuration) =>
     {
         configuration.Sources.Clear();
