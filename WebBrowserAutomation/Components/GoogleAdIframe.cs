@@ -80,7 +80,15 @@ public class GoogleAdIframe
         switch (adType)
         {
             case AdType.FullFrame:
-                wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
+                try
+                { 
+                    wait.Until(drv => drv.FindElement(_resumeAdDivBy)).Click();
+                }
+                catch (WebDriverTimeoutException e)
+                {
+                    Log.Warning(e, "找不到繼續播放有聲廣告的按鈕，先繼續執行");
+                }
+                
                 countDownDiv = _driver.FindElement(_fullFrameAdCountDownBy);
                 break;
             case AdType.VideoBox:
