@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Web;
 using AutoMapper;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenQA.Selenium;
@@ -52,6 +53,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
     .Build();
 var config = host.Services.GetRequiredService<IConfiguration>();
 var environment = host.Services.GetRequiredService<IHostEnvironment>();
+var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
@@ -64,7 +66,7 @@ var mapperConfig = new MapperConfiguration(cfg =>
         {
             Secure = c.Secure, HttpOnly = c.IsHttpOnly, Expires = c.Expiry ?? DateTime.MinValue
         });
-});
+}, loggerFactory);
 var mapper = mapperConfig.CreateMapper();
 
 try
